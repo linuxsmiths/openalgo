@@ -35,7 +35,16 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized - redirect to login
+      // Handle unauthorized - show message and redirect to login
+      const authError = error.response?.data?.auth_error
+      const message = error.response?.data?.message || 'Session expired. Please log in again.'
+
+      // Show alert if auth_error flag is set (token expired)
+      if (authError) {
+        alert(message)
+      }
+
+      // Redirect to login
       window.location.href = '/login'
     }
     return Promise.reject(error)

@@ -243,6 +243,8 @@ def transform_holdings_data(holdings_data):
             "product": holdings.get("product", ""),
             "pnl": holdings.get("profitandloss", 0.0),
             "pnlpercent": holdings.get("pnlpercentage", 0.0),
+            "average_price": holdings.get("averageprice", 0.0),
+            "ltp": holdings.get("ltp", 0.0),
         }
         transformed_data.append(transformed_position)
     return transformed_data
@@ -254,17 +256,24 @@ def map_portfolio_data(portfolio_data):
     ensures both holdings and totalholding parts are transmitted in a single response.
 
     Parameters:
-    - portfolio_data: A dictionary, where keys are 'holdings' and 'totalholding',
+    - portfolio_data: A Dictionary where keys are 'holdings' and 'totalholding',
                       and values are lists/dictionaries representing the portfolio information.
 
     Returns:
     - The modified portfolio_data with 'product' fields changed for 'holdings' and 'totalholding' included.
     """
+    logger.debug(f"map_portfolio_data input: {portfolio_data}")
+    logger.info(f"[HOLDINGS] Angel API response keys: {list(portfolio_data.keys()) if isinstance(portfolio_data, dict) else 'Not a dict'}")
+    logger.info(f"[HOLDINGS] Angel API full response: {portfolio_data}")
+
     # Check if 'data' is None or doesn't contain 'holdings'
     if portfolio_data.get("data") is None or "holdings" not in portfolio_data["data"]:
-        logger.info("No data available.")
-        # Return an empty structure or handle this scenario as needed
-        return {}
+        logger.warning(f"[HOLDINGS] No holdings data in Angel response. Data value: {portfolio_data.get('data')}")
+        # Return a structure with empty holdings and None totalholding
+        return {
+            "holdings": [],
+            "totalholding": None
+        }
 
     # Directly work with 'data' for clarity and simplicity
     data = portfolio_data["data"]
@@ -290,6 +299,19 @@ def map_portfolio_data(portfolio_data):
 
 
 def calculate_portfolio_statistics(holdings_data):
+    """Calculate portfolio statistics, handling empty or None cases gracefully."""
+    logger.debug(f"calculate_portfolio_statistics input: {holdings_data}")
+
+    # Handle case where holdings_data is empty or doesn't have totalholding key
+    if not holdings_data or "totalholding" not in holdings_data:
+        logger.warning("No totalholding data in holdings_data. Returning zeros.")
+        return {
+            "totalholdingvalue": 0.0,
+            "totalinvvalue": 0.0,
+            "totalprofitandloss": 0.0,
+            "totalpnlpercentage": 0.0,
+        }
+
     if holdings_data["totalholding"] is None:
         totalholdingvalue = 0
         totalinvvalue = 0

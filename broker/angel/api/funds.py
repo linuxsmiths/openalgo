@@ -15,6 +15,10 @@ def get_margin_data(auth_token):
     """Fetch margin data from the broker's API using the provided auth token."""
     api_key = os.getenv("BROKER_API_KEY")
 
+    # Debug logging
+    logger.info(f"[FUNDS DEBUG] Auth token provided: {bool(auth_token)}")
+    logger.info(f"[FUNDS DEBUG] API key configured: {bool(api_key)}")
+
     # Get the shared httpx client with connection pooling
     client = get_httpx_client()
 
@@ -37,6 +41,9 @@ def get_margin_data(auth_token):
 
     # Add status attribute for compatibility with the existing codebase
     response.status = response.status_code
+
+    logger.info(f"[FUNDS DEBUG] API Response Status Code: {response.status}")
+    logger.info(f"[FUNDS DEBUG] Raw API Response: {response.text[:500]}")
 
     margin_data = json.loads(response.text)
 

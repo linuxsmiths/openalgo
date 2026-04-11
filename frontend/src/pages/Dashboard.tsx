@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { onModeChange } from '@/stores/themeStore'
+import HoldingsCard from '@/components/HoldingsCard'
 
 interface MarginData {
   availablecash: string
@@ -12,6 +13,11 @@ interface MarginData {
   m2munrealized: string
   m2mrealized: string
   utiliseddebits: string
+  holdings_summary?: {
+    total_pnl: number
+    total_value: number
+    count: number
+  }
 }
 
 interface MasterContractStatus {
@@ -297,7 +303,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 md:gap-6">
         {/* Available Balance */}
         <Card>
           <CardContent className="pt-6">
@@ -411,6 +417,14 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Holdings P&L */}
+        <HoldingsCard
+          totalValue={marginData?.holdings_summary?.total_value ?? 0}
+          totalPnL={marginData?.holdings_summary?.total_pnl ?? 0}
+          holdingCount={marginData?.holdings_summary?.count ?? 0}
+          isLoading={isLoading}
+        />
       </div>
 
       {/* Error Alert */}

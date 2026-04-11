@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 OpenAlgo is a production-ready algorithmic trading platform built with Flask (backend) and React 19 (frontend). It provides a unified API layer across 24+ Indian brokers, enabling seamless integration with TradingView, Amibroker, Excel, Python, and AI agents.
 
-**Repository**: https://github.com/marketcalls/openalgo
+**Repository**: https://github.com/linuxsmiths/openalgo
 **Documentation**: https://docs.openalgo.in
 
 ## Development Environment Setup

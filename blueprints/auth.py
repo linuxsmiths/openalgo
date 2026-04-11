@@ -814,6 +814,7 @@ def get_dashboard_data():
         from database.auth_db import get_api_key_for_tradingview, get_auth_token
         from database.settings_db import get_analyze_mode
         from services.funds_service import get_funds
+        from services.holdings_service import get_holdings_with_auth
 
         AUTH_TOKEN = get_auth_token(login_username)
 
@@ -845,7 +846,28 @@ def get_dashboard_data():
             logger.error(f"Failed to get margin data for user {login_username}")
             return jsonify({"status": "error", "message": "Failed to get margin data"}), 500
 
-        return jsonify({"status": "success", "data": margin_data})
+        # Fetch holdings summary
+        holdings_summary = {"total_pnl": 0, "total_value": 0, "count": 0}
+        try:
+            success_holdings, holdings_response, _ = get_holdings_with_auth(AUTH_TOKEN, broker)
+            if success_holdings and holdings_response.get("status") == "success":
+                stats = holdings_response.get("data", {}).get("statistics", {})
+                holdings_summary = {
+                    "total_pnl": float(stats.get("totalprofitandloss", 0)),
+                    "total_value": float(stats.get("totalholdingvalue", 0)),
+                    "count": len(holdings_response.get("data", {}).get("holdings", [])),
+                }
+        except Exception as e:
+            logger.warning(f"Failed to fetch holdings summary for dashboard: {e}")
+            # Don't fail the entire request if holdings fetch fails
+
+        return jsonify({
+            "status": "success",
+            "data": {
+                **margin_data,
+                "holdings_summary": holdings_summary
+            }
+        })
 
     except Exception as e:
         logger.exception(f"Error fetching dashboard data: {e}")

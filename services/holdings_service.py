@@ -106,26 +106,71 @@ def get_holdings_with_auth(
 
     try:
         # Get holdings using broker functions
+        logger.info(f"[HOLDINGS] Fetching holdings for broker: {broker}")
         holdings = broker_funcs["get_holdings"](auth_token)
+        logger.debug(f"[HOLDINGS] Raw API response: {holdings}")
 
-        if "status" in holdings and holdings["status"] == "error":
+        # Check for error responses (handle different broker response formats)
+        # Angel format: {"success": False, "message": "...", "errorCode": "..."}
+        # Generic format: {"status": "error", "message": "..."}
+        is_error = False
+        error_msg = None
+        error_code = None
+
+        if isinstance(holdings, dict):
+            if "success" in holdings and holdings["success"] is False:
+                # Angel broker response format
+                is_error = True
+                error_msg = holdings.get("message", "Error fetching holdings data")
+                error_code = holdings.get("errorCode")
+            elif "status" in holdings and holdings["status"] == "error":
+                # Generic error format
+                is_error = True
+                error_msg = holdings.get("message", "Error fetching holdings data")
+
+        if is_error:
+            logger.error(f"[HOLDINGS] API returned error: {error_msg} (code: {error_code})")
+
+            # Check if it's an auth error (token expired)
+            if "token" in error_msg.lower() or "unauthorized" in error_msg.lower() or error_code in ["AG8001"]:
+                logger.warning(f"[HOLDINGS] Token authentication error detected. User needs to re-authenticate.")
+                # AG8001 is Angel's "Invalid Token" error code
+                return (
+                    False,
+                    {
+                        "status": "error",
+                        "message": "Authentication token expired or invalid. Please re-authenticate.",
+                        "auth_error": True,
+                    },
+                    401,
+                )
+
             return (
                 False,
                 {
                     "status": "error",
-                    "message": holdings.get("message", "Error fetching holdings data"),
+                    "message": error_msg,
                 },
                 500,
             )
 
+        logger.debug(f"[HOLDINGS] Before map_portfolio_data: {holdings}")
+
         # Transform data using mapping functions
         holdings = broker_funcs["map_portfolio_data"](holdings)
+        logger.debug(f"[HOLDINGS] After map_portfolio_data: {holdings}")
+
         portfolio_stats = broker_funcs["calculate_portfolio_statistics"](holdings)
+        logger.debug(f"[HOLDINGS] Portfolio statistics: {portfolio_stats}")
+
         holdings = broker_funcs["transform_holdings_data"](holdings)
+        logger.debug(f"[HOLDINGS] After transform_holdings_data: {len(holdings) if isinstance(holdings, list) else 'N/A'} items")
 
         # Format numeric values to 2 decimal places
         formatted_holdings = format_holdings_data(holdings)
         formatted_stats = format_statistics(portfolio_stats)
+
+        logger.info(f"[HOLDINGS] Successfully fetched {len(formatted_holdings)} holdings for broker {broker}")
 
         return (
             True,
@@ -135,9 +180,13 @@ def get_holdings_with_auth(
             },
             200,
         )
+    except KeyError as e:
+        logger.error(f"[HOLDINGS] KeyError - Missing expected data structure: {e}")
+        logger.error(f"[HOLDINGS] Traceback: {traceback.format_exc()}")
+        return False, {"status": "error", "message": f"Data structure error: {str(e)}"}, 500
     except Exception as e:
-        logger.error(f"Error processing holdings data: {e}")
-        traceback.print_exc()
+        logger.error(f"[HOLDINGS] Unexpected error processing holdings data: {e}")
+        logger.error(f"[HOLDINGS] Traceback: {traceback.format_exc()}")
         return False, {"status": "error", "message": str(e)}, 500
 
 
