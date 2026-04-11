@@ -1,0 +1,203 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                      OPENALGO ARCHITECTURE SUMMARY                             ║
+║            Open-Source Algorithmic Trading Platform - Self-Hosted              ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ ENTRY POINTS (External Systems)                                                 │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│ • TradingView (webhook alerts)        • Amibroker (REST API calls)              │
+│ • Python Scripts (SDK/REST)           • Excel (REST endpoints)                  │
+│ • N8N (workflow automation)           • AI Agents (MCP server)                   │
+│ • Google Sheets (REST API)            • Telegram Alerts                         │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+         ╔═══════════════════════════════════════════════════════╗
+         ║          OPENALGO FLASK APPLICATION (Port 5000)       ║
+         ╠═══════════════════════════════════════════════════════╣
+         ║                                                       ║
+         ║ ┌─────────────────────────────────────────────────┐  ║
+         ║ │  REST API Layer (/api/v1/)                      │  ║
+         ║ │  • 40+ auto-documented endpoints (Flask-RESTX)  │  ║
+         ║ │  • Order management, portfolio, market data     │  ║
+         ║ │  • Real-time event streaming (SocketIO)         │  ║
+         ║ └─────────────────────────────────────────────────┘  ║
+         ║                      ↓                                ║
+         ║ ┌─────────────────────────────────────────────────┐  ║
+         ║ │  Service Layer (business logic)                 │  ║
+         ║ │  • 60+ services (place_order, analyzer, etc)    │  ║
+         ║ │  • Paper trading, strategy execution            │  ║
+         ║ │  • Order approval workflow                      │  ║
+         ║ └─────────────────────────────────────────────────┘  ║
+         ║                      ↓                                ║
+         ║ ┌─────────────────────────────────────────────────┐  ║
+         ║ │  Broker Abstraction Layer                       │  ║
+         ║ │  ╔═══════════════════════════════════════════╗  │  ║
+         ║ │  ║  30+ Broker Plugins (dynamic loading)    ║  │  ║
+         ║ │  ╠═══════════════════════════════════════════╣  │  ║
+         ║ │  ║ • Auth (OAuth2 / API key)               ║  │  ║
+         ║ │  ║ • Order execution (place/modify/cancel) ║  │  ║
+         ║ │  ║ • Market data (quotes, depth, history)  ║  │  ║
+         ║ │  ║ • Portfolio (holdings, funds, margins)  ║  │  ║
+         ║ │  ║ • WebSocket adapter (normalize feeds)   ║  │  ║
+         ║ │  ║ • Symbol mapping (OpenAlgo ↔ broker)    ║  │  ║
+         ║ │  ╚═══════════════════════════════════════════╝  │  ║
+         ║ │  Brokers: Zerodha, Angel, Fyers, Upstox, Dhan, │  ║
+         ║ │           Shoonya, 5Paisa, Flattrade, Samco...  │  ║
+         ║ └─────────────────────────────────────────────────┘  ║
+         ║                      ↓                                ║
+         ║ ┌─────────────────────────────────────────────────┐  ║
+         ║ │  Real Broker APIs (30+ brokers)                 │  ║
+         ║ │  Place orders, stream market data, authenticate │  ║
+         ║ └─────────────────────────────────────────────────┘  ║
+         ║                                                       ║
+         ╚═══════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ REAL-TIME DATA SYSTEMS (Parallel to REST API)                                   │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│
+│  Broker WebSocket Streams (Market Data)
+│         ↓
+│  ╔═════════════════════════════════════════════════════════╗
+│  ║  WebSocket Proxy Server (Port 8765)                     ║
+│  ║  • Single unified endpoint for all brokers              ║
+│  ║  • Connection pooling: 1000 symbols/ws × 3 = 3000 max ║
+│  ║  • Dynamic broker adapter factory                       ║
+│  ║  • Message throttling (50ms min between updates)        ║
+│  ╚═════════════════════════════════════════════════════════╝
+│         ↓
+│  ╔═════════════════════════════════════════════════════════╗
+│  ║  ZeroMQ Message Bus (Port 5555)                         ║
+│  ║  • High-performance internal message distribution       ║
+│  ║  • Sub-millisecond latency                              ║
+│  ║  • PubSub pattern (symbol subscriptions)                ║
+│  ╚═════════════════════════════════════════════════════════╝
+│         ↓
+│  Connected Clients (React Frontend + SDK clients)
+│  • Real-time quotes subscription
+│  • Market depth updates
+│  • Trade notifications
+
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ DATABASE ARCHITECTURE (5 Isolated Databases)                                     │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│
+│  openalgo.db (Main Application)
+│  ├─ User, Auth, ApiKeys (encrypted with Argon2 + Fernet)
+│  ├─ Strategy, Flow (visual strategy builder)
+│  ├─ ActionCenter (order approval workflow)
+│  └─ Settings, Telegram, Token tracking
+│
+│  logs.db (Traffic & Audit)
+│  ├─ API call logs (endpoint, response time, status)
+│  ├─ Order/trade history with IST timestamps
+│  └─ Login attempts (IP, device, success/failure)
+│
+│  latency.db (Performance Metrics)
+│  └─ Order execution round-trip times per broker
+│
+│  sandbox.db (Paper Trading - Isolated)
+│  ├─ Virtual ₹1 Crore capital
+│  ├─ Realistic margin system per broker
+│  └─ Complete isolation from live trading
+│
+│  historify.duckdb (Historical Data - DuckDB)
+│  └─ Market data snapshots (columnar high-performance storage)
+
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ FRONTEND ARCHITECTURE (React 19 SPA)                                             │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│
+│  ┌──────────────────────────────────────────────────────┐
+│  │  Browser / Mobile                                    │
+│  └──────────────────────────────────────────────────────┘
+│                   ↑↓ (HTTP + WebSocket)
+│  ┌──────────────────────────────────────────────────────┐
+│  │  React 19 SPA (TypeScript + Vite)                    │
+│  ├──────────────────────────────────────────────────────┤
+│  │  • Pages: Dashboard, Orders, Holdings, Flow Builder  │
+│  │  • Components: shadcn/ui + Tailwind CSS              │
+│  │  • State Management: Zustand (client) + TQuery (srv) │
+│  │  • Code Editor: CodeMirror (Python strategies)       │
+│  │  • Charts: TradingView Lightweight Charts            │
+│  │  • Visual Builder: xyflow/React Flow (node editor)   │
+│  │  • Real-time: Socket.IO (order/trade updates)        │
+│  └──────────────────────────────────────────────────────┘
+
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ SPECIAL FEATURES                                                                 │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│
+│  🎯 Visual Strategy Builder (Flow)
+│     └─ Drag-drop node editor → webhook triggers → real-time execution
+│
+│  📊 Paper Trading Mode (Analyzer)
+│     └─ ₹1 Crore virtual capital + realistic margin + auto square-off
+│
+│  ✅ Action Center (Order Approval)
+│     └─ Semi-auto mode: manual approval before execution
+│
+│  🤖 AI Agent Integration (MCP Server)
+│     └─ Claude, Copilot, ChatGPT compatible → natural language trading
+│
+│  📈 Monitoring Tools
+│     ├─ Latency Monitor (execution performance)
+│     ├─ Traffic Monitor (API analytics)
+│     └─ PnL Tracker (interactive P&L charts)
+│
+│  🔔 Telegram Bot
+│     └─ Strategy alerts + orderbook query + chart generation
+│
+│  🐍 Python Strategy Manager
+│     └─ In-app editor with syntax highlighting + scheduled execution
+
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ SECURITY LAYERS                                                                  │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│
+│  ✓ Password Hashing: Argon2-CFFI (PHC winner 2015)
+│  ✓ Token Encryption: Fernet symmetric + PBKDF2 KDF
+│  ✓ API Key Security: Argon2 hash + Fernet encryption in DB
+│  ✓ Session Tracking: Multi-device, per-connection audit trail
+│  ✓ 2FA Support: TOTP with authenticator apps
+│  ✓ CSRF Protection: Flask-WTF with token validation
+│  ✓ CORS: Configurable allowed origins
+│  ✓ CSP Headers: Content Security Policy enforcement
+│  ✓ Rate Limiting: Per endpoint (login, API, orders)
+│  ✓ IP Banning: Manual/automatic suspicious IP blocking
+│  ✓ Audit Logging: All login attempts with IP + device
+
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│ TECHNOLOGY STACK AT A GLANCE                                                     │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│
+│  Backend                    Frontend                Development
+│  ─────────────              ────────────              ───────────
+│  Flask 3.0                  React 19                  pytest
+│  SQLAlchemy 2.0             TypeScript               Vitest
+│  Flask-SocketIO             Tailwind CSS 4           Playwright (E2E)
+│  Flask-RESTX                shadcn/ui                Biome (linting)
+│  Argon2-CFFI                TanStack Query            Ruff
+│  Cryptography (Fernet)      Zustand                  
+│  ZeroMQ                     CodeMirror               
+│  APScheduler                xyflow/React Flow         
+│  SQLite + DuckDB            Vite 7                    
+
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+DEPLOYMENT SUPPORT: Docker, AWS, Nginx, Gunicorn (use -w 1 for WebSocket)
+
+═══════════════════════════════════════════════════════════════════════════════════
+KEY STATS: 839 Python files | ~98.7K LOC | 30+ brokers | 40+ API endpoints
+═══════════════════════════════════════════════════════════════════════════════════
