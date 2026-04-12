@@ -45,6 +45,7 @@ export const secondaryNavItems: NavItem[] = [
   { href: '/platforms', label: 'Platforms', icon: Layers },
   { href: '/logs', label: 'Logs', icon: FileBarChart },
   { href: '/tools', label: 'Tools', icon: Wrench },
+  { href: '/topmovers', label: 'Top Movers', icon: TrendingUp },
 ]
 
 // All navigation items (for backward compatibility and mobile)

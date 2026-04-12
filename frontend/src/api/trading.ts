@@ -241,4 +241,16 @@ export const tradingApi = {
     const response = await webClient.post<ApiResponse<void>>('/cancel_all_orders', {})
     return response.data
   },
+
+  /**
+   * Get top gainers and losers
+   */
+  getTopMovers: async (apiKey: string, exchange: string = 'NSE', limit: number = 10) => {
+    const response = await apiClient.post<any>('/topmovers', {
+      apikey: apiKey,
+      exchange,
+      limit,
+    })
+    return response.data
+  },
 }

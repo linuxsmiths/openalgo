@@ -164,7 +164,7 @@ def track_latency(api_type):
 
                 # Get broker name from auth_db using API key
                 broker_name = None
-                if "apikey" in request_data:
+                if "apikey" in request_data and request_data["apikey"] is not None:
                     broker_name = get_broker_name(request_data["apikey"])
 
                 OrderLatency.log_latency(

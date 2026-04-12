@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { onModeChange } from '@/stores/themeStore'
 import HoldingsCard from '@/components/HoldingsCard'
+import { TopMoversCard } from '@/components/TopMoversCard'
 
 interface MarginData {
   availablecash: string
@@ -425,6 +426,9 @@ export default function Dashboard() {
           holdingCount={marginData?.holdings_summary?.count ?? 0}
           isLoading={isLoading}
         />
+
+        {/* Top Movers */}
+        <TopMoversCard />
       </div>
 
       {/* Error Alert */}
