@@ -678,7 +678,7 @@ check_status "Failed to create base directory"
 
 # Clone repository
 log_message "\nCloning OpenAlgo repository..." "$BLUE"
-sudo git clone https://github.com/marketcalls/openalgo.git $OPENALGO_PATH
+sudo git clone https://github.com/linuxsmiths/openalgo.git $OPENALGO_PATH
 check_status "Failed to clone OpenAlgo repository"
 
 # Create virtual environment using uv
