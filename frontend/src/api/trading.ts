@@ -264,4 +264,56 @@ export const tradingApi = {
     })
     return response.data
   },
+
+  /**
+   * Get user's watchlist with current quotes
+   */
+  getWatchlist: async (apiKey: string) => {
+    const response = await apiClient.get<any>('/watchlist', {
+      params: { apikey: apiKey },
+    })
+    return response.data
+  },
+
+  /**
+   * Add symbol to watchlist
+   */
+  addToWatchlist: async (apiKey: string, symbol: string, exchange: string = 'NSE') => {
+    const response = await apiClient.post<any>('/watchlist/add', {
+      apikey: apiKey,
+      symbol,
+      exchange,
+    })
+    return response.data
+  },
+
+  /**
+   * Remove symbol from watchlist
+   */
+  removeFromWatchlist: async (apiKey: string, symbol: string, exchange: string = 'NSE') => {
+    const response = await apiClient.delete<any>(`/watchlist/remove/${symbol}`, {
+      params: { apikey: apiKey, exchange },
+    })
+    return response.data
+  },
+
+  /**
+   * Search for symbols
+   */
+  searchSymbols: async (query: string, apiKey: string, exchange?: string, limit: number = 20) => {
+    const response = await apiClient.get<any>('/watchlist/search', {
+      params: { query, apikey: apiKey, exchange, limit },
+    })
+    return response.data
+  },
+
+  /**
+   * Clear entire watchlist
+   */
+  clearWatchlist: async (apiKey: string) => {
+    const response = await apiClient.delete<any>('/watchlist/clear', {
+      params: { apikey: apiKey },
+    })
+    return response.data
+  },
 }
