@@ -31,7 +31,7 @@ export function TopMovers() {
   const [losers, setLosers] = useState<Mover[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [exchange, setExchange] = useState('NSE')
+  const [index, setIndex] = useState('NIFTY50')
   const [limit, setLimit] = useState(10)
   const [cached, setCached] = useState(false)
   const [cachedAt, setCachedAt] = useState<string | null>(null)
@@ -43,14 +43,14 @@ export function TopMovers() {
     if (apiKey) {
       fetchTopMovers()
     }
-  }, [exchange, limit, apiKey])
+  }, [index, limit, apiKey])
 
   const fetchTopMovers = async () => {
     if (!apiKey) return
     setLoading(true)
     setError(null)
     try {
-      const response = await tradingApi.getTopMovers(apiKey, exchange, limit)
+      const response = await tradingApi.getTopMovers(apiKey, index, limit)
       if (response.status === 'success') {
         const g = response.data.gainers || []
         const l = response.data.losers || []
@@ -129,15 +129,19 @@ export function TopMovers() {
       <Card>
         <CardContent className="grid grid-cols-1 gap-4 pt-6 md:grid-cols-2">
           <div>
-            <label className="text-sm font-medium">Exchange</label>
-            <Select value={exchange} onValueChange={setExchange}>
+            <label className="text-sm font-medium">Index</label>
+            <Select value={index} onValueChange={setIndex}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="NSE">NSE</SelectItem>
-                <SelectItem value="BSE">BSE</SelectItem>
-                <SelectItem value="NFO">NFO</SelectItem>
+                <SelectItem value="NIFTY50">NIFTY 50</SelectItem>
+                <SelectItem value="NIFTY100">NIFTY 100</SelectItem>
+                <SelectItem value="BANKNIFTY">BANKNIFTY</SelectItem>
+                <SelectItem value="NIFTY-AUTO">NIFTY Auto</SelectItem>
+                <SelectItem value="NIFTY-IT">NIFTY IT</SelectItem>
+                <SelectItem value="NIFTY-PHARMA">NIFTY Pharma</SelectItem>
+                <SelectItem value="NIFTY-FINSVC">NIFTY FinSvc</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 class TopMoversSchema(Schema):
     """Schema for top movers request"""
     apikey = ma_fields.Str(required=True)
-    exchange = ma_fields.Str(required=False, missing='NSE')
+    index = ma_fields.Str(required=False, missing='NIFTY50')
     limit = ma_fields.Int(required=False, missing=10)
 
 
@@ -67,17 +67,17 @@ class TopMovers(Resource):
     """Top Movers Endpoint"""
 
     @limiter.limit(API_RATE_LIMIT)
-    @api.doc(description='Get top gainers and losers for an exchange')
+    @api.doc(description='Get top gainers and losers for an index')
     @api.expect(
         api.model(
             'TopMoversRequest',
             {
                 'apikey': fields.String(required=True, description='API Key'),
-                'exchange': fields.String(
+                'index': fields.String(
                     required=False,
-                    description='Exchange code (NSE, BSE)',
-                    example='NSE',
-                    default='NSE',
+                    description='Index code (NIFTY50, NIFTY100, BANKNIFTY, NIFTY-AUTO, NIFTY-IT, NIFTY-PHARMA)',
+                    example='NIFTY50',
+                    default='NIFTY50',
                 ),
                 'limit': fields.Integer(
                     required=False,
@@ -107,16 +107,17 @@ class TopMovers(Resource):
                 }, 400
 
             apikey = validated_data.get('apikey')
-            exchange = validated_data.get('exchange', 'NSE').upper()
+            index = validated_data.get('index', 'NIFTY50').upper()
             limit = min(validated_data.get('limit', 10), 100)  # Cap at 100
 
-            logger.info(f"TopMovers request: exchange={exchange}, limit={limit}")
+            logger.info(f"TopMovers request: index={index}, limit={limit}")
 
-            # Validate exchange
-            if exchange not in ['NSE', 'BSE', 'NFO']:
+            # Validate index
+            valid_indices = ['NIFTY50', 'NIFTY100', 'BANKNIFTY', 'NIFTY-AUTO', 'NIFTY-IT', 'NIFTY-PHARMA', 'NIFTY-FINSVC']
+            if index not in valid_indices:
                 return {
                     'status': 'error',
-                    'message': f"Invalid exchange: {exchange}. Must be NSE, BSE, or NFO",
+                    'message': f"Invalid index: {index}. Must be one of: {', '.join(valid_indices)}",
                 }, 400
 
             # Validate API key
@@ -129,7 +130,7 @@ class TopMovers(Resource):
                 }, 401
 
             # Fetch top movers (pass API key, not username)
-            result = get_top_movers(apikey, exchange=exchange, limit=limit)
+            result = get_top_movers(apikey, index=index, limit=limit)
 
             return {
                 'status': 'success',
@@ -139,7 +140,7 @@ class TopMovers(Resource):
                     'cached': result.get('cached', False),
                     'cached_at': result.get('cached_at'),
                 },
-                'message': f"Fetched top {limit} gainers and losers for {exchange}",
+                'message': f"Fetched top {limit} gainers and losers for {index}",
             }, 200
 
         except Exception as e:

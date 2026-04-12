@@ -245,10 +245,10 @@ export const tradingApi = {
   /**
    * Get top gainers and losers
    */
-  getTopMovers: async (apiKey: string, exchange: string = 'NSE', limit: number = 10) => {
+  getTopMovers: async (apiKey: string, index: string = 'NIFTY50', limit: number = 10) => {
     const response = await apiClient.post<any>('/topmovers', {
       apikey: apiKey,
-      exchange,
+      index,
       limit,
     })
     return response.data

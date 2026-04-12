@@ -75,9 +75,81 @@ def get_symbols_for_exchange(broker_name: str, exchange: str) -> list[dict]:
     return []
 
 
+def get_symbols_for_index(index: str) -> list[dict]:
+    """
+    Return list of common stocks for a given index
+    
+    Args:
+        index: Index code (NIFTY50, NIFTY100, BANKNIFTY, NIFTY-AUTO, etc.)
+    
+    Returns:
+        List of dicts with symbol and exchange
+    """
+    # Index compositions - highly liquid stocks that matter for top movers analysis
+    indices = {
+        'NIFTY50': [
+            'RELIANCE', 'TCS', 'INFY', 'HDFC', 'HDFCBANK', 'ICICIBANK', 'SBIN',
+            'AXISBANK', 'KOTAKBANK', 'MARUTI', 'ASIANPAINT', 'WIPRO', 'TECHM',
+            'LT', 'BAJAJFINSV', 'BAJAJ-AUTO', 'SUNPHARMA', 'TATASTEEL', 'M&M',
+            'NTPC', 'ONGC', 'BPCL', 'IOC', 'POWERGRID', 'EICHERMOT', 'JSWSTEEL',
+            'HINDALCO', 'ULTRACEMCO', 'SHREECEM', 'ADANIENT', 'ADANIPOWER',
+            'ITC', 'BHARTIARTL', 'HEROMOTOCO', 'SIEMENS', 'HAVELLS', 'VOLTAS',
+            'PIDILITIND', 'BOSCHIND', 'DRREDDY', 'CIPLA', 'BIOCON', 'LUPIN',
+            'DIVISLAB', 'BAJATOOLSJOY', 'MCDOWELL-N', 'BRITANNIA', 'NESTLEIND',
+        ],
+        'NIFTY100': [
+            # NIFTY50 stocks + additional 50
+            'RELIANCE', 'TCS', 'INFY', 'HDFC', 'HDFCBANK', 'ICICIBANK', 'SBIN',
+            'AXISBANK', 'KOTAKBANK', 'MARUTI', 'ASIANPAINT', 'WIPRO', 'TECHM',
+            'LT', 'BAJAJFINSV', 'BAJAJ-AUTO', 'SUNPHARMA', 'TATASTEEL', 'M&M',
+            'NTPC', 'ONGC', 'BPCL', 'IOC', 'POWERGRID', 'EICHERMOT', 'JSWSTEEL',
+            'HINDALCO', 'ULTRACEMCO', 'SHREECEM', 'ADANIENT', 'ADANIPOWER',
+            'ITC', 'BHARTIARTL', 'HEROMOTOCO', 'SIEMENS', 'HAVELLS', 'VOLTAS',
+            'PIDILITIND', 'BOSCHIND', 'DRREDDY', 'CIPLA', 'BIOCON', 'LUPIN',
+            'DIVISLAB', 'BAJATOOLSJOY', 'MCDOWELL-N', 'BRITANNIA', 'NESTLEIND',
+            # Additional 50 for NIFTY100
+            'MINDTREE', 'PERSISTENT', 'HCL-INSYS', 'HCLTECH', 'INFOSYS',
+            'GAIL', 'INDIGO', 'SPICEJET', 'APOLLOHOSP', 'BHARATHPE',
+            'MAZDAAP', 'TATAMOTORS', 'TATACOMM', 'TATAPWR', 'TATASTL',
+            'VEDL', 'MARICO', 'BRITANNIA', 'COLPAL', 'INDRA',
+            'PEL', 'PAGEIND', 'PGHH', 'STICLDEBT', 'STICLSE', 'SUPREMEIND',
+            'TORNTPHARM', 'UPL', 'VBL', 'WIPRO', 'ZEALINDUST',
+        ],
+        'BANKNIFTY': [
+            'SBIN', 'HDFCBANK', 'ICICIBANK', 'AXISBANK', 'KOTAKBANK',
+            'INDUSIND', 'BANDHAN', 'IDFCBANK', 'AUBANK', 'YES BANK',
+            'IDBI', 'PNB', 'CANARA', 'SOUTHBANK', 'UNIONBANK', 'BOBANK',
+        ],
+        'NIFTY-AUTO': [
+            'MARUTI', 'BAJAJ-AUTO', 'HEROMOTOCO', 'TATAMOTORS', 'EICHERMOT',
+            'M&M', 'MAZDAAP', 'ASHOKLEY', 'BAJAJFINSV', 'TVS', 'GRAPHITE',
+        ],
+        'NIFTY-IT': [
+            'TCS', 'INFY', 'WIPRO', 'TECHM', 'HCL-INSYS', 'HCLTECH', 'MINDTREE',
+            'PERSISTENT', 'LT-INFOTECH', 'KPITTECH',
+        ],
+        'NIFTY-PHARMA': [
+            'SUNPHARMA', 'DRREDDY', 'CIPLA', 'LUPIN', 'BIOCON', 'DIVISLAB',
+            'ALEMBICPHM', 'AUROPHARMA', 'GLENMARK', 'LAURUSLABS',
+        ],
+        'NIFTY-FINSVC': [
+            'HDFCBANK', 'ICICIBANK', 'AXISBANK', 'KOTAKBANK', 'SBIN',
+            'BAJAJFINSV', 'LT', 'ABCAPITAL', 'MOTILALORSF', 'PIIND',
+        ],
+    }
+    
+    stocks = indices.get(index, [])
+    if not stocks:
+        logger.warning(f"Unknown index: {index}, available: {list(indices.keys())}")
+        # Default to NIFTY50
+        stocks = indices.get('NIFTY50', [])
+    
+    return [{'symbol': stock, 'exchange': 'NSE'} for stock in stocks]
+
+
 def get_common_symbols(exchange: str) -> list[dict]:
     """
-    Fallback: Return list of common stocks for testing
+    Fallback: Return list of common stocks by exchange
     This is used when master contract DB is not available
     """
     # Common NSE stocks for testing
@@ -101,13 +173,13 @@ def get_common_symbols(exchange: str) -> list[dict]:
     return [{'symbol': stock, 'exchange': exchange} for stock in stocks]
 
 
-def get_top_movers(api_key: str, exchange: str = 'NSE', limit: int = 10) -> Dict[str, Any]:
+def get_top_movers(api_key: str, index: str = 'NIFTY50', limit: int = 10) -> Dict[str, Any]:
     """
-    Get top gainers and losers for a given exchange
+    Get top gainers and losers for a given index
 
     Args:
         api_key: OpenAlgo API key (for broker auth)
-        exchange: Exchange code (NSE, BSE)
+        index: Index code (NIFTY50, NIFTY100, BANKNIFTY, NIFTY-AUTO, etc.)
         limit: Number of top movers to return
 
     Returns:
@@ -115,9 +187,9 @@ def get_top_movers(api_key: str, exchange: str = 'NSE', limit: int = 10) -> Dict
     """
     try:
         # Step 1: Check cache first
-        cached = get_cached_movers(exchange, max_age_minutes=5)
+        cached = get_cached_movers(index, max_age_minutes=5)
         if cached:
-            logger.info(f"Returning cached top movers for {exchange}")
+            logger.info(f"Returning cached top movers for {index}")
             return {
                 'gainers': cached['gainers'][:limit],
                 'losers': cached['losers'][:limit],
@@ -125,7 +197,7 @@ def get_top_movers(api_key: str, exchange: str = 'NSE', limit: int = 10) -> Dict
                 'cached_at': cached['cached_at'].isoformat() if cached['cached_at'] else None,
             }
 
-        logger.info(f"Cache miss for {exchange}, fetching fresh data")
+        logger.info(f"Cache miss for {index}, fetching fresh data")
 
         # Step 2: Get broker and auth token using API key
         auth_token, broker_name = get_auth_token_broker(api_key)
@@ -149,19 +221,15 @@ def get_top_movers(api_key: str, exchange: str = 'NSE', limit: int = 10) -> Dict
 
         broker_data = BrokerData(auth_token)
 
-        # Step 5: Get all symbols for exchange
-        logger.info(f"Fetching symbols for {exchange}")
-        symbols = get_symbols_for_exchange(broker_name, exchange)
-        if not symbols:
-            logger.warning(f"No symbols found for {exchange}, trying fallback")
-            # Fallback: use a hardcoded list of common NSE/BSE stocks
-            symbols = get_common_symbols(exchange)
+        # Step 5: Get symbols for index
+        logger.info(f"Fetching symbols for {index}")
+        symbols = get_symbols_for_index(index)
         
         if not symbols:
-            logger.warning(f"Still no symbols found for {exchange}")
+            logger.warning(f"No symbols found for {index}")
             return {'gainers': [], 'losers': [], 'cached': False}
 
-        logger.info(f"Found {len(symbols)} symbols for {exchange}")
+        logger.info(f"Found {len(symbols)} symbols for {index}")
 
         # Step 6: Fetch multiquotes
         logger.info(f"Fetching quotes for {len(symbols)} symbols from {broker_name}")
@@ -251,12 +319,12 @@ def get_top_movers(api_key: str, exchange: str = 'NSE', limit: int = 10) -> Dict
 
         # Step 10: Cache results
         try:
-            save_movers_cache(exchange, gainers, losers)
+            save_movers_cache(index, gainers, losers)
         except Exception as e:
             logger.exception(f"Error saving cache: {e}")
             # Continue anyway, cache is not critical
 
-        logger.info(f"Successfully fetched top {limit} gainers and losers for {exchange}")
+        logger.info(f"Successfully fetched top {limit} gainers and losers for {index}")
 
         return {
             'gainers': gainers,

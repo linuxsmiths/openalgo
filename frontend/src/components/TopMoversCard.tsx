@@ -34,7 +34,7 @@ export function TopMoversCard() {
     setLoading(true)
     setError(null)
     try {
-      const response = await tradingApi.getTopMovers(apiKey, 'NSE', 5)
+      const response = await tradingApi.getTopMovers(apiKey, 'NIFTY50', 5)
       if (response.status === 'success') {
         setGainers(response.data.gainers || [])
         setLosers(response.data.losers || [])
