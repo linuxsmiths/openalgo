@@ -3,8 +3,6 @@ name: CI
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - 'frontend/**'  # Skip on frontend-only changes for backend jobs
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -54,10 +52,6 @@ jobs:
   # Frontend linting
   frontend-lint:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.push.modified, 'frontend/') ||
-      contains(github.event.push.added, 'frontend/')
     defaults:
       run:
         working-directory: frontend
@@ -74,10 +68,6 @@ jobs:
   # Frontend build (includes TypeScript check)
   frontend-build:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.push.modified, 'frontend/') ||
-      contains(github.event.push.added, 'frontend/')
     defaults:
       run:
         working-directory: frontend
@@ -121,10 +111,6 @@ jobs:
   # Frontend E2E tests (Chromium only for speed)
   frontend-e2e:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.push.modified, 'frontend/') ||
-      contains(github.event.push.added, 'frontend/')
     defaults:
       run:
         working-directory: frontend
