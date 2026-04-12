@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { Footer } from './Footer'
 import { MobileBottomNav } from './MobileBottomNav'
 import { Navbar } from './Navbar'
+import { IndicesTopBar } from '@/components/IndicesTopBar'
 
 export function Layout() {
   const { isAuthenticated, user } = useAuthStore()
@@ -23,6 +24,7 @@ export function Layout() {
     <SocketProvider>
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
+        <IndicesTopBar />
         <main className="container mx-auto px-4 py-6 pb-24 md:pb-6 flex-1">
           <Outlet />
         </main>

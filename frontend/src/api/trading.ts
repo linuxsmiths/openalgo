@@ -253,4 +253,15 @@ export const tradingApi = {
     })
     return response.data
   },
+
+  /**
+   * Get current index quotes (NIFTY 50, SENSEX, BANKNIFTY)
+   * Universal endpoint - works with all brokers
+   */
+  getIndices: async (apiKey: string) => {
+    const response = await apiClient.post<any>('/indices', {
+      apikey: apiKey,
+    })
+    return response.data
+  },
 }

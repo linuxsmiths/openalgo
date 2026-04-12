@@ -33,6 +33,9 @@ const Holdings = lazy(() => import('@/pages/Holdings'))
 const TopMovers = lazy(() =>
   import('@/pages/TopMovers').then((m) => ({ default: m.TopMovers }))
 )
+const AllIndices = lazy(() =>
+  import('@/pages/AllIndices').then((m) => ({ default: m.AllIndices }))
+)
 const Token = lazy(() => import('@/pages/Token'))
 const Search = lazy(() => import('@/pages/Search'))
 const ApiKey = lazy(() => import('@/pages/ApiKey'))
@@ -166,6 +169,7 @@ function App() {
                 <Route path="/tradebook" element={<TradeBook />} />
                 <Route path="/holdings" element={<HoldingsRoute />} />
                 <Route path="/topmovers" element={<TopMovers />} />
+                <Route path="/indices" element={<AllIndices />} />
                 {/* Search routes - match Flask /search/* routes */}
                 <Route path="/search/token" element={<Token />} />
                 <Route path="/search" element={<Search />} />
