@@ -45,10 +45,20 @@ def get_symbols_for_exchange(broker_name: str, exchange: str) -> list[dict]:
         if hasattr(master_contract_module, 'SymToken'):
             SymToken = master_contract_module.SymToken
             
-            # Query symbols for the exchange, excluding derivatives
-            symbols = SymToken.query.filter_by(exchange=exchange).filter_by(
-                instrumenttype='EQ'  # Only equities
-            ).all()
+            # For NSE/BSE, instrumenttype is often NULL (spot market equities)
+            # For derivatives (NFO, MCX), filter by specific instrument types
+            if exchange in ['NSE', 'BSE']:
+                # Query symbols where instrumenttype is NULL or empty (spot equities)
+                symbols = SymToken.query.filter_by(exchange=exchange).filter(
+                    (SymToken.instrumenttype == None) |
+                    (SymToken.instrumenttype == '') |
+                    (SymToken.instrumenttype == 'EQ')
+                ).all()
+            else:
+                # For derivatives, filter by specific instrument type (EQ if available)
+                symbols = SymToken.query.filter_by(exchange=exchange).filter_by(
+                    instrumenttype='EQ'
+                ).all()
             
             result = [
                 {'symbol': s.symbol, 'exchange': s.exchange}
