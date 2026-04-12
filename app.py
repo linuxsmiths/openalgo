@@ -188,6 +188,7 @@ from database.settings_db import init_db as ensure_settings_tables_exists
 from database.strategy_db import init_db as ensure_strategy_tables_exists
 from database.symbol import init_db as ensure_master_contract_tables_exists
 from database.telegram_db import get_bot_config
+from database.topmovers_cache_db import init_db as ensure_topmovers_cache_tables_exists
 from database.traffic_db import init_logs_db as ensure_traffic_logs_exists
 from database.user_db import init_db as ensure_user_tables_exists
 from extensions import socketio  # Import SocketIO
@@ -608,6 +609,7 @@ def setup_environment(app):
                 ("Historify DB", ensure_historify_tables_exists),
                 ("Flow DB", ensure_flow_tables_exists),
                 ("Leverage DB", ensure_leverage_tables_exists),
+                ("Top Movers Cache DB", ensure_topmovers_cache_tables_exists),
             ]
 
             db_init_start = time.time()
