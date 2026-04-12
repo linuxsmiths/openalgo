@@ -29,19 +29,26 @@ export interface NavItem {
   icon: LucideIcon
 }
 
-// Main navigation items shown in desktop navbar
-export const navItems: NavItem[] = [
+// Primary navigation items shown in desktop navbar
+export const primaryNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/orderbook', label: 'Orderbook', icon: ClipboardList },
   { href: '/tradebook', label: 'Tradebook', icon: FileText },
   { href: '/holdings', label: 'Holdings', icon: ClipboardList },
   { href: '/positions', label: 'Positions', icon: TrendingUp },
   { href: '/action-center', label: 'Action Center', icon: Bell },
-  { href: '/platforms', label: 'Platforms', icon: Layers },
   { href: '/strategy', label: 'Strategy', icon: Code2 },
+]
+
+// Secondary navigation items hidden under "More" menu
+export const secondaryNavItems: NavItem[] = [
+  { href: '/platforms', label: 'Platforms', icon: Layers },
   { href: '/logs', label: 'Logs', icon: FileBarChart },
   { href: '/tools', label: 'Tools', icon: Wrench },
 ]
+
+// All navigation items (for backward compatibility and mobile)
+export const navItems: NavItem[] = [...primaryNavItems, ...secondaryNavItems]
 
 // Items shown in mobile bottom navigation
 export const bottomNavItems: NavItem[] = [

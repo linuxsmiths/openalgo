@@ -4,12 +4,39 @@ import {
   isActiveRoute,
   mobileSheetItems,
   navItems,
+  primaryNavItems,
+  secondaryNavItems,
   profileMenuItems,
 } from './navigation'
 
 describe('Navigation Config', () => {
+  describe('primaryNavItems', () => {
+    it('contains visible desktop navigation items', () => {
+      expect(primaryNavItems).toHaveLength(7)
+
+      const labels = primaryNavItems.map((item) => item.label)
+      expect(labels).toContain('Dashboard')
+      expect(labels).toContain('Orderbook')
+      expect(labels).toContain('Holdings')
+      expect(labels).toContain('Positions')
+      expect(labels).toContain('Strategy')
+      expect(labels).toContain('Action Center')
+    })
+  })
+
+  describe('secondaryNavItems', () => {
+    it('contains hidden items under More menu', () => {
+      expect(secondaryNavItems).toHaveLength(3)
+
+      const labels = secondaryNavItems.map((item) => item.label)
+      expect(labels).toContain('Platforms')
+      expect(labels).toContain('Logs')
+      expect(labels).toContain('Tools')
+    })
+  })
+
   describe('navItems', () => {
-    it('contains the expected main navigation items', () => {
+    it('contains all navigation items', () => {
       expect(navItems).toHaveLength(10)
 
       const labels = navItems.map((item) => item.label)

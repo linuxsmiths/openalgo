@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, LogOut, Menu, Moon, Sun, Zap } from 'lucide-react'
+import { BarChart3, BookOpen, LogOut, Menu, Moon, MoreHorizontal, Sun, Zap } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { showToast } from '@/utils/toast'
@@ -21,7 +21,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
-import { isActiveRoute, mobileSheetItems, navItems, profileMenuItems } from '@/config/navigation'
+import { isActiveRoute, mobileSheetItems, primaryNavItems, secondaryNavItems, profileMenuItems } from '@/config/navigation'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { useBrokerStore } from '@/stores/brokerStore'
@@ -170,7 +170,7 @@ export function Navbar() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">
-          {navItems.map((item) => (
+          {primaryNavItems.map((item) => (
             <Link
               key={item.href}
               to={item.href}
@@ -184,6 +184,33 @@ export function Navbar() {
               {item.label}
             </Link>
           ))}
+
+          {/* More menu for secondary items */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-1 px-2"
+                title="More navigation options"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">More</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {secondaryNavItems.map((item) => (
+                <DropdownMenuItem
+                  key={item.href}
+                  onSelect={() => navigate(item.href)}
+                  className="cursor-pointer"
+                >
+                  <item.icon className="h-4 w-4 mr-2" />
+                  {item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
         {/* Right Side */}
