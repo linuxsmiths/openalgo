@@ -34,7 +34,7 @@ print_error() {
 # Check for required tools
 check_requirements() {
     print_header "Checking Requirements"
-    
+
     # Check for uv
     if ! command -v uv &> /dev/null; then
         print_error "uv package manager not found"
@@ -45,48 +45,101 @@ check_requirements() {
     print_success "uv package manager installed"
 }
 
+# Ask user permission to install nvm
+ask_install_nvm() {
+    echo ""
+    echo "nvm (Node Version Manager) is required but not installed."
+    echo ""
+    echo "I will run:"
+    echo "  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash"
+    echo ""
+    echo "This will:"
+    echo "  • Download nvm installer from GitHub"
+    echo "  • Install nvm to ~/.nvm directory"
+    echo "  • Add nvm configuration to your shell profile (~/.bashrc, ~/.zshrc, etc)"
+    echo "  • You may need to restart your terminal or run: source ~/.nvm/nvm.sh"
+    echo ""
+    echo -n "Do you want to continue? (y/n): "
+    read -r response
+
+    if [[ "$response" =~ ^[Yy]$ ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Auto-install nvm if not available
+auto_install_nvm() {
+    print_warning "Installing nvm..."
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash > /dev/null 2>&1
+
+    # Source nvm
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+    if command -v nvm &> /dev/null; then
+        print_success "nvm installed successfully"
+        return 0
+    else
+        print_error "Failed to install nvm"
+        return 1
+    fi
+}
+
 # Handle Node version with nvm
 setup_node_version() {
     print_header "Checking Node.js"
-    
-    # Check if nvm is installed
+
+    # Check if nvm is installed, if not try to install it
     NVM_AVAILABLE=false
     if [ -s "$HOME/.nvm/nvm.sh" ]; then
         source "$HOME/.nvm/nvm.sh"
         NVM_AVAILABLE=true
+    else
+        # Try to auto-install nvm
+        print_warning "nvm not found"
+        if ask_install_nvm; then
+            if auto_install_nvm; then
+                source "$HOME/.nvm/nvm.sh"
+                NVM_AVAILABLE=true
+            fi
+        else
+            print_warning "nvm installation cancelled by user"
+        fi
     fi
-    
+
     # Get current Node version
     CURRENT_NODE=$(node --version 2>/dev/null || echo "")
-    
+
     if [ -z "$CURRENT_NODE" ]; then
-        print_error "Node.js not installed"
-        
+        # Node not installed
         if [ "$NVM_AVAILABLE" = true ]; then
-            echo "Installing Node 22 with nvm..."
+            print_warning "Node.js not found, installing Node 22..."
             nvm install 22
             nvm use 22
-            print_success "Node 22 installed"
+            print_success "Node 22 installed and activated"
         else
+            print_error "Could not install nvm automatically"
             echo ""
-            echo "Please install Node 20 or later:"
-            echo "  Option 1: Using nvm (recommended)"
+            echo "Please install Node 20 or later manually:"
+            echo "  Option 1: Install nvm first"
             echo "    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash"
-            echo "    $0  # Then run this script again"
+            echo "    Then run: ./run.sh"
             echo ""
-            echo "  Option 2: Direct download"
+            echo "  Option 2: Download Node directly"
             echo "    https://nodejs.org/ (download v20 or v22)"
             exit 1
         fi
     else
         # Check version compatibility
         MAJOR_VERSION=$(echo $CURRENT_NODE | cut -d. -f1 | sed 's/v//')
-        
+
         if [ "$MAJOR_VERSION" -lt 20 ]; then
-            print_warning "Node $CURRENT_NODE detected (requires 20+)"
-            
+            print_warning "Node $CURRENT_NODE is too old (requires 20+)"
+
             if [ "$NVM_AVAILABLE" = true ]; then
-                echo "Upgrading to Node 22 with nvm..."
+                print_warning "Upgrading to Node 22..."
                 nvm install 22
                 nvm use 22
                 print_success "Node 22 installed and activated"
@@ -97,7 +150,7 @@ setup_node_version() {
             fi
         else
             print_success "Node $CURRENT_NODE (compatible)"
-            
+
             # Try to use Node 22 if available via nvm (non-fatal if it fails)
             if [ "$NVM_AVAILABLE" = true ]; then
                 nvm use 22 2>/dev/null || true
@@ -109,11 +162,11 @@ setup_node_version() {
 # Check and build frontend if needed
 setup_frontend() {
     print_header "Setting up Frontend"
-    
+
     # Check if frontend/dist exists
     if [ ! -d "frontend/dist" ]; then
         print_warning "frontend/dist not found - frontend build required"
-        
+
         # Check if node_modules exists
         if [ ! -d "frontend/node_modules" ]; then
             print_warning "Installing npm dependencies..."
@@ -121,7 +174,7 @@ setup_frontend() {
             npm install --legacy-peer-deps 2>&1 | tail -5
             cd ..
         fi
-        
+
         # Build frontend
         print_warning "Building frontend (this may take 1-2 minutes)..."
         cd frontend
@@ -136,10 +189,10 @@ setup_frontend() {
 # Check environment configuration
 check_environment() {
     print_header "Checking Environment Configuration"
-    
+
     if [ ! -f ".env" ]; then
         print_warning ".env file not found"
-        
+
         if [ -f ".sample.env" ]; then
             echo "Creating .env from .sample.env..."
             cp .sample.env .env
@@ -171,7 +224,7 @@ start_app() {
     echo ""
     echo "Press Ctrl+C to stop"
     echo ""
-    
+
     uv run app.py
 }
 
@@ -180,13 +233,13 @@ main() {
     # Get script directory and change to it
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     cd "$SCRIPT_DIR"
-    
+
     # Run setup checks
     check_requirements
     setup_node_version
     setup_frontend
     check_environment
-    
+
     # Start application
     start_app
 }
