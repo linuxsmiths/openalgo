@@ -1,5 +1,7 @@
 import {
   AlertTriangle,
+  ChevronDown,
+  ChevronUp,
   Download,
   Loader2,
   Pause,
@@ -29,10 +31,23 @@ import { cn, makeFormatCurrency, sanitizeCSV } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { onModeChange } from '@/stores/themeStore'
 import type { Holding, HoldingsStats } from '@/types/trading'
+import type { MultiQuotesSymbol } from '@/api/trading'
 import { showToast } from '@/utils/toast'
+
+type SortKey = 'symbol' | 'quantity' | 'avg_price' | 'ltp' | 'pnl' | 'pnl_percent' | 'day_pnl' | 'day_pnl_percent'
+type SortOrder = 'asc' | 'desc'
 
 function formatPercent(value: number): string {
   return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
+}
+
+function getSortIcon(columnKey: SortKey, sortKey: SortKey | null, sortOrder: SortOrder) {
+  if (columnKey !== sortKey) return null
+  return sortOrder === 'asc' ? (
+    <ChevronUp className="h-4 w-4 inline ml-1" />
+  ) : (
+    <ChevronDown className="h-4 w-4 inline ml-1" />
+  )
 }
 
 export default function Holdings() {
@@ -44,6 +59,8 @@ export default function Holdings() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showStaleWarning, setShowStaleWarning] = useState(false)
+  const [sortKey, setSortKey] = useState<SortKey | null>(null)
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
   // Page visibility tracking for resource optimization
   const { isVisible, wasHidden, timeSinceHidden } = usePageVisibility()
@@ -75,6 +92,77 @@ export default function Holdings() {
     return calculateLiveStats(enhancedHoldings, stats)
   }, [stats, enhancedHoldings])
 
+  // Calculate 1D stats
+  const dayStats = useMemo(() => {
+    let totalDayPnL = 0
+    let totalDayPnLPercent = 0
+
+    enhancedHoldings.forEach((h) => {
+      if (h.day_pnl) totalDayPnL += h.day_pnl
+    })
+
+    // Calculate weighted average 1D return %
+    const totalInvValue = enhancedStats?.totalinvvalue || 0
+    if (totalInvValue > 0) {
+      totalDayPnLPercent = (totalDayPnL / totalInvValue) * 100
+    }
+
+    return { totalDayPnL, totalDayPnLPercent }
+  }, [enhancedHoldings, enhancedStats])
+
+  // Sorted holdings
+  const sortedHoldings = useMemo(() => {
+    if (!sortKey) return enhancedHoldings
+
+    const sorted = [...enhancedHoldings].sort((a, b) => {
+      let aVal: number | string = 0
+      let bVal: number | string = 0
+
+      switch (sortKey) {
+        case 'symbol':
+          aVal = a.symbol
+          bVal = b.symbol
+          break
+        case 'quantity':
+          aVal = a.quantity
+          bVal = b.quantity
+          break
+        case 'avg_price':
+          aVal = a.average_price || 0
+          bVal = b.average_price || 0
+          break
+        case 'ltp':
+          aVal = a.ltp || 0
+          bVal = b.ltp || 0
+          break
+        case 'pnl':
+          aVal = a.pnl
+          bVal = b.pnl
+          break
+        case 'pnl_percent':
+          aVal = a.pnlpercent
+          bVal = b.pnlpercent
+          break
+        case 'day_pnl':
+          aVal = a.day_pnl || 0
+          bVal = b.day_pnl || 0
+          break
+        case 'day_pnl_percent':
+          aVal = a.day_pnl_percent || 0
+          bVal = b.day_pnl_percent || 0
+          break
+      }
+
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
+      }
+
+      return sortOrder === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number)
+    })
+
+    return sorted
+  }, [enhancedHoldings, sortKey, sortOrder])
+
   const fetchHoldings = useCallback(
     async (showRefresh = false) => {
       if (!apiKey) {
@@ -87,7 +175,49 @@ export default function Holdings() {
       try {
         const response = await tradingApi.getHoldings(apiKey)
         if (response.status === 'success' && response.data) {
-          setHoldings(response.data.holdings || [])
+          let holdingsData = response.data.holdings || []
+
+          // Fetch quotes to calculate 1D P&L
+          if (holdingsData.length > 0) {
+            const symbols: MultiQuotesSymbol[] = holdingsData.map((h) => ({
+              symbol: h.symbol,
+              exchange: h.exchange,
+            }))
+
+            try {
+              const quotesResponse = await tradingApi.getMultiQuotes(apiKey, symbols)
+              if (quotesResponse.status === 'success' && quotesResponse.results) {
+                const quoteMap = new Map(
+                  quotesResponse.results.map((q) => [
+                    `${q.exchange}:${q.symbol}`,
+                    { prev_close: q.data.prev_close, ltp: q.data.ltp },
+                  ])
+                )
+
+                // Enrich holdings with 1D P&L
+                holdingsData = holdingsData.map((h) => {
+                  const quote = quoteMap.get(`${h.exchange}:${h.symbol}`)
+                  if (quote && quote.prev_close && quote.ltp) {
+                    const day_pnl = (quote.ltp - quote.prev_close) * h.quantity
+                    const day_pnl_percent =
+                      ((quote.ltp - quote.prev_close) / quote.prev_close) * 100
+
+                    return {
+                      ...h,
+                      prev_close: quote.prev_close,
+                      day_pnl,
+                      day_pnl_percent,
+                    }
+                  }
+                  return h
+                })
+              }
+            } catch {
+              // Continue with holdings data if quotes fetch fails
+            }
+          }
+
+          setHoldings(holdingsData)
           setStats(response.data.statistics)
           setError(null)
         } else {
@@ -102,6 +232,15 @@ export default function Holdings() {
     },
     [apiKey]
   )
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortKey(key)
+      setSortOrder('desc')
+    }
+  }
 
   // Initial fetch and visibility-aware polling
   // Pauses polling when tab is hidden to save resources
@@ -165,8 +304,10 @@ export default function Holdings() {
         'Avg Price',
         'LTP',
         'Product',
-        'P&L',
-        'P&L %',
+        'P&L (Overall)',
+        'P&L % (Overall)',
+        'P&L (1D)',
+        'P&L % (1D)',
       ]
       const rows = enhancedHoldings.map((h) => [
         sanitizeCSV(h.symbol),
@@ -177,6 +318,8 @@ export default function Holdings() {
         sanitizeCSV(h.product),
         sanitizeCSV(h.pnl),
         sanitizeCSV(h.pnlpercent),
+        sanitizeCSV(h.day_pnl || 0),
+        sanitizeCSV(h.day_pnl_percent || 0),
       ])
 
       const csv = [headers, ...rows].map((row) => row.join(',')).join('\n')
@@ -263,7 +406,7 @@ export default function Holdings() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Investment Value</CardDescription>
+            <CardDescription>Total Invested</CardDescription>
             <CardTitle className="text-2xl">
               {enhancedStats ? formatCurrency(enhancedStats.totalinvvalue) : '---'}
             </CardTitle>
@@ -271,23 +414,28 @@ export default function Holdings() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Profit and Loss</CardDescription>
+            <CardDescription>Total P&L</CardDescription>
             <CardTitle
               className={cn(
-                'text-2xl',
+                'text-lg',
                 enhancedStats && isProfit(enhancedStats.totalprofitandloss)
                   ? 'text-green-600'
                   : 'text-red-600'
               )}
             >
               {enhancedStats ? (
-                <div className="flex items-center gap-1">
-                  {isProfit(enhancedStats.totalprofitandloss) ? (
-                    <TrendingUp className="h-5 w-5" />
-                  ) : (
-                    <TrendingDown className="h-5 w-5" />
-                  )}
-                  {formatCurrency(enhancedStats.totalprofitandloss)}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1">
+                    {isProfit(enhancedStats.totalprofitandloss) ? (
+                      <TrendingUp className="h-4 w-4" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4" />
+                    )}
+                    {formatCurrency(enhancedStats.totalprofitandloss)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatPercent(enhancedStats.totalpnlpercentage)}
+                  </div>
                 </div>
               ) : (
                 '---'
@@ -297,16 +445,32 @@ export default function Holdings() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total PnL Percentage</CardDescription>
+            <CardDescription>1D Returns</CardDescription>
             <CardTitle
               className={cn(
-                'text-2xl',
-                enhancedStats && isProfit(enhancedStats.totalpnlpercentage)
+                'text-lg',
+                dayStats && isProfit(dayStats.totalDayPnL)
                   ? 'text-green-600'
                   : 'text-red-600'
               )}
             >
-              {enhancedStats ? formatPercent(enhancedStats.totalpnlpercentage) : '---'}
+              {enhancedStats ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1">
+                    {isProfit(dayStats.totalDayPnL) ? (
+                      <TrendingUp className="h-4 w-4" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4" />
+                    )}
+                    {formatCurrency(dayStats.totalDayPnL)}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatPercent(dayStats.totalDayPnLPercent)}
+                  </div>
+                </div>
+              ) : (
+                '---'
+              )}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -321,45 +485,111 @@ export default function Holdings() {
             </div>
           ) : error ? (
             <div className="text-center py-12 text-muted-foreground">{error}</div>
-          ) : holdings.length === 0 ? (
+          ) : sortedHoldings.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">No holdings found</div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Trading Symbol</TableHead>
-                    <TableHead>Exchange</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                    <TableHead className="text-right">Avg Price</TableHead>
-                    <TableHead className="text-right">LTP</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-right">Profit and Loss</TableHead>
-                    <TableHead className="text-right">PnL %</TableHead>
+                    <TableHead className="w-24">
+                      <button
+                        onClick={() => handleSort('symbol')}
+                        className="flex items-center gap-1 hover:text-foreground"
+                      >
+                        Symbol
+                        {getSortIcon('symbol', sortKey, sortOrder)}
+                      </button>
+                    </TableHead>
+                    <TableHead className="w-20 text-right">
+                      <button
+                        onClick={() => handleSort('quantity')}
+                        className="flex items-center gap-1 hover:text-foreground justify-end w-full"
+                      >
+                        Qty
+                        {getSortIcon('quantity', sortKey, sortOrder)}
+                      </button>
+                    </TableHead>
+                    <TableHead className="w-28 text-right">
+                      <button
+                        onClick={() => handleSort('avg_price')}
+                        className="flex items-center gap-1 hover:text-foreground justify-end w-full"
+                      >
+                        Avg Price
+                        {getSortIcon('avg_price', sortKey, sortOrder)}
+                      </button>
+                    </TableHead>
+                    <TableHead className="w-24 text-right">
+                      <button
+                        onClick={() => handleSort('ltp')}
+                        className="flex items-center gap-1 hover:text-foreground justify-end w-full"
+                      >
+                        LTP
+                        {getSortIcon('ltp', sortKey, sortOrder)}
+                      </button>
+                    </TableHead>
+                    <TableHead className="w-32 text-right">
+                      <button
+                        onClick={() => handleSort('pnl_percent')}
+                        className="flex items-center gap-1 hover:text-foreground justify-end w-full"
+                      >
+                        % Chg (Overall)
+                        {getSortIcon('pnl_percent', sortKey, sortOrder)}
+                      </button>
+                    </TableHead>
+                    <TableHead className="w-32 text-right">
+                      <button
+                        onClick={() => handleSort('pnl')}
+                        className="flex items-center gap-1 hover:text-foreground justify-end w-full"
+                      >
+                        P&L (Overall)
+                        {getSortIcon('pnl', sortKey, sortOrder)}
+                      </button>
+                    </TableHead>
+                    <TableHead className="w-28 text-right">
+                      <button
+                        onClick={() => handleSort('day_pnl_percent')}
+                        className="flex items-center gap-1 hover:text-foreground justify-end w-full"
+                      >
+                        % Chg (1D)
+                        {getSortIcon('day_pnl_percent', sortKey, sortOrder)}
+                      </button>
+                    </TableHead>
+                    <TableHead className="w-28 text-right">
+                      <button
+                        onClick={() => handleSort('day_pnl')}
+                        className="flex items-center gap-1 hover:text-foreground justify-end w-full"
+                      >
+                        P&L (1D)
+                        {getSortIcon('day_pnl', sortKey, sortOrder)}
+                      </button>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {enhancedHoldings.map((holding, index) => (
+                  {sortedHoldings.map((holding, index) => (
                     <TableRow key={`${holding.symbol}-${holding.exchange}-${index}`}>
-                      <TableCell className="font-medium">{holding.symbol}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{holding.exchange}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-mono">{holding.quantity}</TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="w-24 font-medium">{holding.symbol}</TableCell>
+                      <TableCell className="w-20 text-right font-mono">{holding.quantity}</TableCell>
+                      <TableCell className="w-28 text-right font-mono">
                         {holding.average_price !== undefined
                           ? formatCurrency(holding.average_price)
                           : '-'}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="w-24 text-right font-mono">
                         {holding.ltp !== undefined ? formatCurrency(holding.ltp) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{holding.product}</Badge>
                       </TableCell>
                       <TableCell
                         className={cn(
-                          'text-right font-medium',
+                          'w-32 text-right font-medium',
+                          isProfit(holding.pnlpercent) ? 'text-green-600' : 'text-red-600'
+                        )}
+                      >
+                        {formatPercent(holding.pnlpercent)}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          'w-32 text-right font-medium',
                           isProfit(holding.pnl) ? 'text-green-600' : 'text-red-600'
                         )}
                       >
@@ -374,23 +604,49 @@ export default function Holdings() {
                       </TableCell>
                       <TableCell
                         className={cn(
-                          'text-right',
-                          isProfit(holding.pnlpercent) ? 'text-green-600' : 'text-red-600'
+                          'w-28 text-right font-medium',
+                          holding.day_pnl_percent !== undefined && isProfit(holding.day_pnl_percent)
+                            ? 'text-green-600'
+                            : 'text-red-600'
                         )}
                       >
-                        {formatPercent(holding.pnlpercent)}
+                        {holding.day_pnl_percent !== undefined
+                          ? formatPercent(holding.day_pnl_percent)
+                          : '-'}
+                      </TableCell>
+                      <TableCell
+                        className={cn(
+                          'w-28 text-right font-medium',
+                          holding.day_pnl !== undefined && isProfit(holding.day_pnl)
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                        )}
+                      >
+                        {holding.day_pnl !== undefined
+                          ? formatCurrency(holding.day_pnl)
+                          : '-'}
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
                 <TableFooter>
                   <TableRow className="bg-muted/50">
-                    <TableCell colSpan={6} className="text-right text-muted-foreground">
-                      Total P&L:
+                    <TableCell colSpan={4} className="text-right text-muted-foreground">
+                      Total:
                     </TableCell>
                     <TableCell
                       className={cn(
-                        'text-right font-bold',
+                        'w-32 text-right font-bold',
+                        enhancedStats && isProfit(enhancedStats.totalpnlpercentage)
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      )}
+                    >
+                      {enhancedStats ? formatPercent(enhancedStats.totalpnlpercentage) : '-'}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        'w-32 text-right font-bold',
                         enhancedStats && isProfit(enhancedStats.totalprofitandloss)
                           ? 'text-green-600'
                           : 'text-red-600'
@@ -402,13 +658,25 @@ export default function Holdings() {
                     </TableCell>
                     <TableCell
                       className={cn(
-                        'text-right font-bold',
-                        enhancedStats && isProfit(enhancedStats.totalpnlpercentage)
+                        'w-28 text-right font-bold',
+                        dayStats && isProfit(dayStats.totalDayPnLPercent)
                           ? 'text-green-600'
                           : 'text-red-600'
                       )}
                     >
-                      {enhancedStats ? formatPercent(enhancedStats.totalpnlpercentage) : '-'}
+                      {enhancedStats ? formatPercent(dayStats.totalDayPnLPercent) : '-'}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        'w-28 text-right font-bold',
+                        dayStats && isProfit(dayStats.totalDayPnL)
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      )}
+                    >
+                      {enhancedStats
+                        ? `${dayStats.totalDayPnL >= 0 ? '+' : ''}${formatCurrency(dayStats.totalDayPnL)}`
+                        : '-'}
                     </TableCell>
                   </TableRow>
                 </TableFooter>

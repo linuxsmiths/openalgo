@@ -46,6 +46,9 @@ export interface Holding {
   pnlpercent: number
   ltp?: number
   average_price?: number
+  prev_close?: number
+  day_pnl?: number
+  day_pnl_percent?: number
 }
 
 export interface PortfolioStats {
