@@ -1,9 +1,17 @@
 #!/bin/bash
 
+# Check if running with sudo
+if [ "$EUID" -ne 0 ]; then
+    echo "❌ This script must be run with sudo privileges"
+    echo "Please run: sudo ./install.sh"
+    exit 1
+fi
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # openalgo Installation Banner
@@ -13,7 +21,7 @@ echo " ██╔═══██╗██╔══██╗██╔════�
 echo " ██║   ██║██████╔╝███████╗██╔██╗ ██║███████║██║     ██║  ███╗██║   ██║"
 echo " ██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║██╔══██║██║     ██║   ██║██║   ██║"
 echo " ╚██████╔╝██╗     ███████╗██║ ╚████║██║  ██║███████╗╚██████╔╝╚██████╔╝"
-echo "  ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ "      
+echo "  ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ "
 echo "                                                                        "
 echo -e "${NC}"
 
@@ -49,12 +57,12 @@ check_status() {
 check_timezone() {
     current_tz=$(timedatectl | grep "Time zone" | awk '{print $3}')
     log_message "Current timezone: $current_tz" "$BLUE"
-    
+
     if [[ "$current_tz" == "Asia/Kolkata" ]]; then
         log_message "Server is already set to IST timezone." "$GREEN"
         return 0
     fi
-    
+
     log_message "Server is not set to IST timezone." "$YELLOW"
     read -p "Would you like to change the timezone to IST? (y/n): " change_tz
     if [[ $change_tz =~ ^[Yy]$ ]]; then
@@ -183,30 +191,46 @@ check_and_configure_swap() {
     TOTAL_RAM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
     TOTAL_RAM_MB=$((TOTAL_RAM_KB / 1024))
     TOTAL_RAM_GB=$((TOTAL_RAM_MB / 1024))
-    
+
     log_message "System RAM: ${TOTAL_RAM_MB}MB (${TOTAL_RAM_GB}GB)" "$BLUE"
-    
+
     # Check if RAM is less than 2GB
     if [ $TOTAL_RAM_MB -lt 2048 ]; then
         log_message "System has less than 2GB RAM. Checking swap configuration..." "$YELLOW"
-        
-        # Check current swap
+
+        # Check current swap (both allocated and in use)
         SWAP_TOTAL=$(free -m | grep Swap | awk '{print $2}')
-        log_message "Current swap: ${SWAP_TOTAL}MB" "$BLUE"
-        
+        SWAP_USED=$(free -m | grep Swap | awk '{print $3}')
+        log_message "Current swap: ${SWAP_TOTAL}MB (${SWAP_USED}MB in use)" "$BLUE"
+
+        # Check if swapfile already exists and is active
+        if [ -f /swapfile ] && swapon -s | grep -q /swapfile; then
+            log_message "Swap file already configured and active: ${SWAP_TOTAL}MB" "$GREEN"
+            return 0
+        fi
+
         if [ $SWAP_TOTAL -lt 3072 ]; then
             log_message "Insufficient swap memory. Creating 3GB swap file..." "$YELLOW"
-            
+
+            # Skip if swapfile already exists (idempotent check)
+            if [ -f /swapfile ]; then
+                log_message "Swap file exists but not active. Activating..." "$YELLOW"
+                sudo swapon /swapfile
+                check_status "Failed to activate swap"
+                log_message "Swap activated successfully" "$GREEN"
+                return 0
+            fi
+
             # Check available disk space
             AVAILABLE_SPACE=$(df / | tail -1 | awk '{print $4}')
             REQUIRED_SPACE=3145728  # 3GB in KB
-            
+
             if [ $AVAILABLE_SPACE -lt $REQUIRED_SPACE ]; then
                 log_message "Error: Not enough disk space for swap file" "$RED"
                 log_message "Available: ${AVAILABLE_SPACE}KB, Required: ${REQUIRED_SPACE}KB" "$RED"
                 exit 1
             fi
-            
+
             # Create swap file
             log_message "Creating 3GB swap file at /swapfile..." "$BLUE"
             sudo fallocate -l 3G /swapfile
@@ -216,39 +240,45 @@ check_and_configure_swap() {
                 sudo dd if=/dev/zero of=/swapfile bs=1M count=3072 status=progress
             fi
             check_status "Failed to create swap file"
-            
+
             # Set permissions
             sudo chmod 600 /swapfile
             check_status "Failed to set swap file permissions"
-            
+
             # Setup swap
             sudo mkswap /swapfile
             check_status "Failed to setup swap"
-            
+
             # Enable swap
             sudo swapon /swapfile
             check_status "Failed to enable swap"
-            
-            # Make swap permanent
+
+            # Make swap permanent (idempotent: only add if not already present)
             if ! grep -q "/swapfile" /etc/fstab; then
                 echo "/swapfile none swap sw 0 0" | sudo tee -a /etc/fstab
                 log_message "Swap file added to /etc/fstab for persistence" "$GREEN"
+            else
+                log_message "Swap file already in /etc/fstab" "$GREEN"
             fi
-            
+
             # Verify swap is active
             NEW_SWAP=$(free -m | grep Swap | awk '{print $2}')
             log_message "Swap configured successfully. Total swap: ${NEW_SWAP}MB" "$GREEN"
-            
-            # Configure swappiness for better performance
-            sudo sysctl vm.swappiness=10
-            echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf
-            log_message "Swappiness set to 10 for better performance" "$GREEN"
+
+            # Configure swappiness (idempotent)
+            if ! grep -q "vm.swappiness=10" /etc/sysctl.conf; then
+                echo "vm.swappiness=10" | sudo tee -a /etc/sysctl.conf
+                log_message "Swappiness set to 10 for better performance" "$GREEN"
+            else
+                log_message "Swappiness already configured" "$GREEN"
+            fi
+            sudo sysctl -w vm.swappiness=10 > /dev/null 2>&1
         else
             log_message "Sufficient swap already exists: ${SWAP_TOTAL}MB" "$GREEN"
         fi
     else
         log_message "System has sufficient RAM (${TOTAL_RAM_GB}GB)" "$GREEN"
-        
+
         # Still check swap for optimal performance
         SWAP_TOTAL=$(free -m | grep Swap | awk '{print $2}')
         if [ $SWAP_TOTAL -eq 0 ]; then
@@ -400,7 +430,7 @@ if is_xts_broker "$BROKER_NAME"; then
     log_message "\nThis broker ($BROKER_NAME) is XTS API-based and requires additional market data credentials." "$YELLOW"
     read -p "Enter your broker market data API key: " BROKER_API_KEY_MARKET
     read -p "Enter your broker market data API secret: " BROKER_API_SECRET_MARKET
-    
+
     if [ -z "$BROKER_API_KEY_MARKET" ] || [ -z "$BROKER_API_SECRET_MARKET" ]; then
         log_message "Error: Market data API credentials are required for XTS-based brokers" "$RED"
         exit 1
@@ -785,7 +815,7 @@ server {
     listen [::]:80;
     server_name $DOMAIN;
     root /var/www/html;
-    
+
     location / {
         try_files \$uri \$uri/ =404;
     }
@@ -917,12 +947,12 @@ server {
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
-    
+
     server_name $DOMAIN;
-    
+
     ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
-    
+
     # SSL configuration
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
@@ -933,7 +963,7 @@ server {
     ssl_session_tickets off;
     ssl_stapling on;
     ssl_stapling_verify on;
-    
+
     # Security headers
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
@@ -944,18 +974,18 @@ server {
     location = /ws {
         proxy_pass http://127.0.0.1:8765;
         proxy_http_version 1.1;
-        
+
         # Extended timeouts for long-running connections (up to 24 hours)
         proxy_read_timeout 86400s;
         proxy_send_timeout 86400s;
-        
+
         # Disable proxy buffering for real-time data
         proxy_buffering off;
-        
+
         # WebSocket headers
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
-        
+
         # Other headers
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -968,18 +998,18 @@ server {
     location /ws/ {
         proxy_pass http://127.0.0.1:8765/;
         proxy_http_version 1.1;
-        
+
         # Extended timeouts for long-running connections (up to 24 hours)
         proxy_read_timeout 86400s;
         proxy_send_timeout 86400s;
-        
+
         # Disable proxy buffering for real-time data
         proxy_buffering off;
-        
+
         # WebSocket headers
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
-        
+
         # Other headers
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
