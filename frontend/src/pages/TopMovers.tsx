@@ -36,7 +36,8 @@ export function TopMovers() {
   const [cached, setCached] = useState(false)
   const [cachedAt, setCachedAt] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>('change_percent')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+  const [gainersSortOrder, setGainersSortOrder] = useState<SortOrder>('desc')
+  const [losersSortOrder, setLosersSortOrder] = useState<SortOrder>('asc')
 
   useEffect(() => {
     if (apiKey) {
@@ -53,8 +54,8 @@ export function TopMovers() {
       if (response.status === 'success') {
         const g = response.data.gainers || []
         const l = response.data.losers || []
-        setGainers(sortMovers(g))
-        setLosers(sortMovers(l))
+        setGainers(sortMoversWithOrder(g, 'change_percent', 'desc'))
+        setLosers(sortMoversWithOrder(l, 'change_percent', 'asc'))
         setCached(response.data.cached || false)
         setCachedAt(response.data.cached_at || null)
       } else {
@@ -67,36 +68,46 @@ export function TopMovers() {
     }
   }
 
-  const sortMovers = (movers: Mover[]): Mover[] => {
+  const sortMoversWithOrder = (movers: Mover[], key: SortKey, order: SortOrder): Mover[] => {
     const sorted = [...movers].sort((a, b) => {
-      let aVal: number | string = a[sortKey as keyof Mover]
-      let bVal: number | string = b[sortKey as keyof Mover]
+      let aVal: number | string = a[key as keyof Mover]
+      let bVal: number | string = b[key as keyof Mover]
 
       if (typeof aVal === 'string') {
         aVal = aVal.toLowerCase()
         bVal = (bVal as string).toLowerCase()
-        return sortOrder === 'asc'
+        return order === 'asc'
           ? aVal.localeCompare(bVal as string)
           : (bVal as string).localeCompare(aVal)
       }
 
       const diff = (aVal as number) - (bVal as number)
-      return sortOrder === 'asc' ? diff : -diff
+      return order === 'asc' ? diff : -diff
     })
     return sorted
   }
 
-  const handleSort = (key: SortKey) => {
+  const handleSort = (key: SortKey, isGainers: boolean = true) => {
     if (sortKey === key) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+      if (isGainers) {
+        const newOrder = gainersSortOrder === 'asc' ? 'desc' : 'asc'
+        setGainersSortOrder(newOrder)
+        setGainers(sortMoversWithOrder(gainers, key, newOrder))
+      } else {
+        const newOrder = losersSortOrder === 'asc' ? 'desc' : 'asc'
+        setLosersSortOrder(newOrder)
+        setLosers(sortMoversWithOrder(losers, key, newOrder))
+      }
     } else {
       setSortKey(key)
-      setSortOrder('desc')
+      if (isGainers) {
+        setGainersSortOrder('desc')
+        setGainers(sortMoversWithOrder(gainers, key, 'desc'))
+      } else {
+        setLosersSortOrder('asc')
+        setLosers(sortMoversWithOrder(losers, key, 'asc'))
+      }
     }
-  }
-
-  const handleSort2 = (movers: Mover[]) => {
-    return sortMovers(movers)
   }
 
   return (
@@ -183,58 +194,58 @@ export function TopMovers() {
                       <tr className="border-b">
                         <th className="px-2 py-2 text-left font-semibold">
                           <button
-                            onClick={() => handleSort('symbol')}
+                            onClick={() => handleSort('symbol', true)}
                             className="hover:text-blue-600"
                           >
                             Symbol{' '}
                             {sortKey === 'symbol' &&
-                              (sortOrder === 'asc' ? '↑' : '↓')}
+                              (gainersSortOrder === 'asc' ? '↑' : '↓')}
                           </button>
                         </th>
                         <th className="px-2 py-2 text-right font-semibold">
                           <button
-                            onClick={() => handleSort('ltp')}
+                            onClick={() => handleSort('ltp', true)}
                             className="hover:text-blue-600"
                           >
                             LTP{' '}
                             {sortKey === 'ltp' &&
-                              (sortOrder === 'asc' ? '↑' : '↓')}
+                              (gainersSortOrder === 'asc' ? '↑' : '↓')}
                           </button>
                         </th>
                         <th className="px-2 py-2 text-right font-semibold">
                           <button
-                            onClick={() => handleSort('change_percent')}
+                            onClick={() => handleSort('change_percent', true)}
                             className="hover:text-blue-600"
                           >
                             % Change{' '}
                             {sortKey === 'change_percent' &&
-                              (sortOrder === 'asc' ? '↑' : '↓')}
+                              (gainersSortOrder === 'asc' ? '↑' : '↓')}
                           </button>
                         </th>
                         <th className="px-2 py-2 text-right font-semibold">
                           <button
-                            onClick={() => handleSort('change_amount')}
+                            onClick={() => handleSort('change_amount', true)}
                             className="hover:text-blue-600"
                           >
                             Abs Change{' '}
                             {sortKey === 'change_amount' &&
-                              (sortOrder === 'asc' ? '↑' : '↓')}
+                              (gainersSortOrder === 'asc' ? '↑' : '↓')}
                           </button>
                         </th>
                         <th className="px-2 py-2 text-right font-semibold">
                           <button
-                            onClick={() => handleSort('volume')}
+                            onClick={() => handleSort('volume', true)}
                             className="hover:text-blue-600"
                           >
                             Volume{' '}
                             {sortKey === 'volume' &&
-                              (sortOrder === 'asc' ? '↑' : '↓')}
+                              (gainersSortOrder === 'asc' ? '↑' : '↓')}
                           </button>
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {handleSort2(gainers).map((mover) => (
+                      {sortMoversWithOrder(gainers, sortKey, gainersSortOrder).map((mover) => (
                         <tr key={mover.symbol} className="border-b hover:bg-green-50">
                           <td className="px-2 py-2 font-medium">
                             {mover.symbol}
@@ -277,58 +288,58 @@ export function TopMovers() {
                       <tr className="border-b">
                         <th className="px-2 py-2 text-left font-semibold">
                           <button
-                            onClick={() => handleSort('symbol')}
+                            onClick={() => handleSort('symbol', false)}
                             className="hover:text-blue-600"
                           >
                             Symbol{' '}
                             {sortKey === 'symbol' &&
-                              (sortOrder === 'asc' ? '↑' : '↓')}
+                              (losersSortOrder === 'asc' ? '↑' : '↓')}
                           </button>
                         </th>
                         <th className="px-2 py-2 text-right font-semibold">
                           <button
-                            onClick={() => handleSort('ltp')}
+                            onClick={() => handleSort('ltp', false)}
                             className="hover:text-blue-600"
                           >
                             LTP{' '}
                             {sortKey === 'ltp' &&
-                              (sortOrder === 'asc' ? '↑' : '↓')}
+                              (losersSortOrder === 'asc' ? '↑' : '↓')}
                           </button>
                         </th>
                         <th className="px-2 py-2 text-right font-semibold">
                           <button
-                            onClick={() => handleSort('change_percent')}
+                            onClick={() => handleSort('change_percent', false)}
                             className="hover:text-blue-600"
                           >
                             % Change{' '}
                             {sortKey === 'change_percent' &&
-                              (sortOrder === 'asc' ? '↑' : '↓')}
+                              (losersSortOrder === 'asc' ? '↑' : '↓')}
                           </button>
                         </th>
                         <th className="px-2 py-2 text-right font-semibold">
                           <button
-                            onClick={() => handleSort('change_amount')}
+                            onClick={() => handleSort('change_amount', false)}
                             className="hover:text-blue-600"
                           >
                             Abs Change{' '}
                             {sortKey === 'change_amount' &&
-                              (sortOrder === 'asc' ? '↑' : '↓')}
+                              (losersSortOrder === 'asc' ? '↑' : '↓')}
                           </button>
                         </th>
                         <th className="px-2 py-2 text-right font-semibold">
                           <button
-                            onClick={() => handleSort('volume')}
+                            onClick={() => handleSort('volume', false)}
                             className="hover:text-blue-600"
                           >
                             Volume{' '}
                             {sortKey === 'volume' &&
-                              (sortOrder === 'asc' ? '↑' : '↓')}
+                              (losersSortOrder === 'asc' ? '↑' : '↓')}
                           </button>
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {handleSort2(losers).map((mover) => (
+                      {sortMoversWithOrder(losers, sortKey, losersSortOrder).map((mover) => (
                         <tr key={mover.symbol} className="border-b hover:bg-red-50">
                           <td className="px-2 py-2 font-medium">
                             {mover.symbol}

@@ -19,25 +19,26 @@ describe('Navigation Config', () => {
       expect(labels).toContain('Orderbook')
       expect(labels).toContain('Holdings')
       expect(labels).toContain('Positions')
-      expect(labels).toContain('Strategy')
+      expect(labels).toContain('Top Movers')
       expect(labels).toContain('Action Center')
     })
   })
 
   describe('secondaryNavItems', () => {
     it('contains hidden items under More menu', () => {
-      expect(secondaryNavItems).toHaveLength(3)
+      expect(secondaryNavItems).toHaveLength(4)
 
       const labels = secondaryNavItems.map((item) => item.label)
       expect(labels).toContain('Platforms')
       expect(labels).toContain('Logs')
       expect(labels).toContain('Tools')
+      expect(labels).toContain('Strategy')
     })
   })
 
   describe('navItems', () => {
     it('contains all navigation items', () => {
-      expect(navItems).toHaveLength(10)
+      expect(navItems).toHaveLength(11)
 
       const labels = navItems.map((item) => item.label)
       expect(labels).toContain('Dashboard')
@@ -46,6 +47,7 @@ describe('Navigation Config', () => {
       expect(labels).toContain('Holdings')
       expect(labels).toContain('Positions')
       expect(labels).toContain('Strategy')
+      expect(labels).toContain('Top Movers')
     })
 
     it('all items have required properties', () => {

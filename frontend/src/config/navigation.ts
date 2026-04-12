@@ -37,7 +37,7 @@ export const primaryNavItems: NavItem[] = [
   { href: '/holdings', label: 'Holdings', icon: ClipboardList },
   { href: '/positions', label: 'Positions', icon: TrendingUp },
   { href: '/action-center', label: 'Action Center', icon: Bell },
-  { href: '/strategy', label: 'Strategy', icon: Code2 },
+  { href: '/topmovers', label: 'Top Movers', icon: TrendingUp },
 ]
 
 // Secondary navigation items hidden under "More" menu
@@ -45,7 +45,7 @@ export const secondaryNavItems: NavItem[] = [
   { href: '/platforms', label: 'Platforms', icon: Layers },
   { href: '/logs', label: 'Logs', icon: FileBarChart },
   { href: '/tools', label: 'Tools', icon: Wrench },
-  { href: '/topmovers', label: 'Top Movers', icon: TrendingUp },
+  { href: '/strategy', label: 'Strategy', icon: Code2 },
 ]
 
 // All navigation items (for backward compatibility and mobile)
