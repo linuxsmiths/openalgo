@@ -49,7 +49,7 @@ export default function HoldingsCard({
 }: HoldingsCardProps) {
   if (holdingCount === 0 && !isLoading) {
     return (
-      <Link to="/portfolio?tab=holdings" className="block cursor-pointer">
+      <Link to="/holdings" className="block cursor-pointer">
         <Card className="hover:border-primary/40 transition-all hover:shadow-md">
           <CardContent className="pt-6">
             <div className="space-y-1">
@@ -66,7 +66,7 @@ export default function HoldingsCard({
   }
 
   return (
-    <Link to="/portfolio?tab=holdings" className="block cursor-pointer">
+    <Link to="/holdings" className="block cursor-pointer">
       <Card className="hover:border-primary/40 transition-all hover:shadow-md">
         <CardContent className="pt-6">
           <div className="space-y-3">
