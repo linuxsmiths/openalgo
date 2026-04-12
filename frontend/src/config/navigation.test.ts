@@ -10,12 +10,13 @@ import {
 describe('Navigation Config', () => {
   describe('navItems', () => {
     it('contains the expected main navigation items', () => {
-      expect(navItems).toHaveLength(9)
+      expect(navItems).toHaveLength(10)
 
       const labels = navItems.map((item) => item.label)
       expect(labels).toContain('Dashboard')
       expect(labels).toContain('Tools')
       expect(labels).toContain('Orderbook')
+      expect(labels).toContain('Holdings')
       expect(labels).toContain('Positions')
       expect(labels).toContain('Strategy')
     })
@@ -65,7 +66,6 @@ describe('Navigation Config', () => {
       const labels = profileMenuItems.map((item) => item.label)
       expect(labels).toContain('Profile')
       expect(labels).toContain('API Key')
-      expect(labels).toContain('Holdings')
     })
   })
 
