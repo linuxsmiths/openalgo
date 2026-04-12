@@ -197,8 +197,8 @@ jobs:
   # canonical tags (:latest, :<sha>).
   docker-build:
     needs: [backend-lint, backend-test, frontend-build, security-scan]
-    # Run on main repo and any fork with Docker Hub secrets configured
-    if: github.event_name == 'push' || github.repository == 'linuxsmiths/openalgo'
+    # Only run on manual workflow dispatch, not on push events
+    if: github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
@@ -306,12 +306,12 @@ jobs:
 
   # Assemble the per-arch digests into a single Docker Hub manifest list
   # (linux/amd64 + linux/arm64) under the canonical tags (:latest, :<sha>).
-  # Runs only on main push; Trivy scan against the assembled image also
+  # Runs only on manual workflow dispatch; Trivy scan against the assembled image also
   # happens here.
   docker-manifest:
     runs-on: ubuntu-latest
     needs: docker-build
-    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.repository == 'linuxsmiths/openalgo'
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - name: Download digests
         uses: actions/download-artifact@v6
