@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import type React from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUp, ArrowDown, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -51,6 +52,7 @@ export const IndicesDisplay: React.FC = () => {
           <h2>Market Indices</h2>
         </div>
         <button
+          type="button"
           className="view-all-btn"
           onClick={() => navigate('/indices')}
         >
