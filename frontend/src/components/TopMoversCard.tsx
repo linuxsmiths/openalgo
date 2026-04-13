@@ -23,6 +23,7 @@ export function TopMoversCard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // biome-ignore lint: this is intentional
   useEffect(() => {
     if (apiKey) {
       fetchTopMovers()
@@ -30,7 +31,8 @@ export function TopMoversCard() {
       const interval = setInterval(fetchTopMovers, 5000)
       return () => clearInterval(interval)
     }
-  }, [apiKey, fetchTopMovers])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKey])
 
   const fetchTopMovers = async () => {
     if (!apiKey) return

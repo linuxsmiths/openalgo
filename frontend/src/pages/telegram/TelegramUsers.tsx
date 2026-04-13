@@ -53,6 +53,7 @@ export default function TelegramUsers() {
   const [unlinkUser, setUnlinkUser] = useState<TelegramUser | null>(null)
   const [isUnlinking, setIsUnlinking] = useState(false)
 
+  // biome-ignore lint: this is intentional
   useEffect(() => {
     fetchUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps

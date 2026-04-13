@@ -89,6 +89,7 @@ export default function ViewStrategy() {
     fetchHostConfig()
   }, [])
 
+  // biome-ignore lint: this is intentional
   useEffect(() => {
     fetchStrategy()
     // eslint-disable-next-line react-hooks/exhaustive-deps

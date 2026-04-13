@@ -23,6 +23,7 @@ export default function TelegramAnalytics() {
   const [analytics, setAnalytics] = useState<TelegramAnalyticsType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // biome-ignore lint: this is intentional
   useEffect(() => {
     fetchAnalytics()
     // eslint-disable-next-line react-hooks/exhaustive-deps

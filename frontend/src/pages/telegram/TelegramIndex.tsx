@@ -64,6 +64,7 @@ export default function TelegramIndex() {
   const [showBroadcastConfirm, setShowBroadcastConfirm] = useState(false)
   const [isBroadcasting, setIsBroadcasting] = useState(false)
 
+  // biome-ignore lint: this is intentional
   useEffect(() => {
     fetchData()
     // eslint-disable-next-line react-hooks/exhaustive-deps

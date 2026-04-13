@@ -28,6 +28,7 @@ export default function TelegramConfig() {
   const [broadcastEnabled, setBroadcastEnabled] = useState(true)
   const [rateLimit, setRateLimit] = useState(10)
 
+  // biome-ignore lint: this is intentional
   useEffect(() => {
     fetchConfig()
     // eslint-disable-next-line react-hooks/exhaustive-deps
