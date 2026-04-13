@@ -12,14 +12,16 @@ import {
 describe('Navigation Config', () => {
   describe('primaryNavItems', () => {
     it('contains visible desktop navigation items', () => {
-      expect(primaryNavItems).toHaveLength(5)
+      expect(primaryNavItems).toHaveLength(7)
 
       const labels = primaryNavItems.map((item) => item.label)
       expect(labels).toContain('Dashboard')
       expect(labels).toContain('Orderbook')
+      expect(labels).toContain('Tradebook')
       expect(labels).toContain('Holdings')
       expect(labels).toContain('Positions')
       expect(labels).toContain('Action Center')
+      expect(labels).toContain('Watchlist')
     })
   })
 
