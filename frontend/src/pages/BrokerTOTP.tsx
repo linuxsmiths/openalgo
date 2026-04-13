@@ -373,7 +373,8 @@ export default function BrokerTOTP() {
       if (data.status === 'success' || response.ok) {
         login(formData.userid || formData.mobile || '', broker || '')
         showToast.success('Authentication successful')
-        navigate('/dashboard')
+        // Use hard navigation so AuthSync re-runs and picks up the new broker session
+        window.location.href = '/dashboard'
       } else {
         setError(data.message || 'Authentication failed. Please try again.')
       }

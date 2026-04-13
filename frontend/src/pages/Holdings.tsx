@@ -245,8 +245,8 @@ export default function Holdings() {
   // Initial fetch and visibility-aware polling
   // Pauses polling when tab is hidden to save resources
   useEffect(() => {
-    // Don't poll when tab is hidden
-    if (!isVisible) return
+    // Don't poll when tab is hidden or API key not available yet
+    if (!isVisible || !apiKey) return
 
     fetchHoldings()
     lastFetchRef.current = Date.now()
@@ -259,7 +259,7 @@ export default function Holdings() {
     }, intervalMs)
 
     return () => clearInterval(interval)
-  }, [fetchHoldings, isLive, isVisible])
+  }, [fetchHoldings, isLive, isVisible, apiKey])
 
   // Refresh data when tab becomes visible after being hidden
   useEffect(() => {
