@@ -1,7 +1,7 @@
 .indices-topbar {
   background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
   border-bottom: 2px solid #e5e7eb;
-  padding: 12px 16px;
+  padding: 6px 16px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   position: sticky;
   top: 0;
@@ -17,18 +17,21 @@
   gap: 24px;
 }
 
+.indices-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .indices-list {
   display: flex;
-  gap: 24px;
-  flex: 1;
-  justify-content: center;
+  gap: 20px;
 }
 
 .index-item {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 110px;
+  align-items: center;
+  gap: 6px;
 }
 
 .index-name {
@@ -40,10 +43,9 @@
 }
 
 .index-value {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
   color: #1f2937;
-  line-height: 1;
 }
 
 .index-change {
@@ -51,13 +53,13 @@
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
 }
 
 .change-details {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 
 .change-percent {
@@ -73,13 +75,12 @@
 
 .market-status {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 14px;
-  border-radius: 8px;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  border-radius: 6px;
   background: white;
   border: 1px solid #e5e7eb;
-  min-width: 180px;
 }
 
 .market-status.open {
@@ -95,15 +96,15 @@
 .status-indicator {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 5px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .status-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #10b981;
   animation: pulse 2s infinite;
@@ -115,12 +116,8 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
 }
 
 .status-text {
@@ -134,7 +131,7 @@
 .time-info {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   font-size: 12px;
   color: #6b7280;
 }
@@ -158,14 +155,14 @@
 .indices-viewall-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 5px;
+  padding: 5px 10px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   background: white;
   color: #374151;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -180,132 +177,28 @@
 }
 
 .indices-viewall-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 @media (max-width: 1200px) {
-  .indices-list {
-    gap: 20px;
-  }
-
-  .index-item {
-    min-width: 100px;
-  }
-
-  .index-value {
-    font-size: 15px;
-  }
-
-  .market-status {
-    min-width: 160px;
-    font-size: 12px;
-  }
+  .indices-list { gap: 16px; }
+  .index-value { font-size: 12px; }
+  .market-status { font-size: 11px; }
 }
 
 @media (max-width: 768px) {
-  .indices-topbar {
-    padding: 10px 12px;
-  }
-
-  .indices-topbar-content {
-    gap: 12px;
-    flex-direction: column;
-  }
-
-  .indices-list {
-    gap: 16px;
-    overflow-x: auto;
-    padding: 0 4px;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    width: 100%;
-    scrollbar-width: none;
-  }
-
-  .indices-list::-webkit-scrollbar {
-    display: none;
-  }
-
-  .index-item {
-    min-width: 95px;
-    flex-shrink: 0;
-  }
-
-  .index-name {
-    font-size: 10px;
-  }
-
-  .index-value {
-    font-size: 13px;
-  }
-
-  .index-change {
-    font-size: 11px;
-  }
-
-  .topbar-right {
-    width: 100%;
-    gap: 12px;
-  }
-
-  .market-status {
-    flex: 1;
-    min-width: auto;
-    font-size: 11px;
-    padding: 8px 12px;
-  }
-
-  .status-indicator {
-    font-size: 12px;
-  }
-
-  .time-info {
-    font-size: 11px;
-  }
-
-  .current-time {
-    font-size: 11px;
-  }
-
-  .time-remaining {
-    font-size: 11px;
-  }
-
-  .indices-viewall-btn {
-    padding: 6px 10px;
-    font-size: 12px;
-  }
-
-  .indices-viewall-btn svg {
-    display: none;
-  }
+  .indices-topbar { padding: 6px 12px; }
+  .indices-topbar-content { gap: 8px; flex-wrap: wrap; }
+  .indices-list { gap: 12px; overflow-x: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .indices-list::-webkit-scrollbar { display: none; }
+  .index-item { flex-shrink: 0; }
+  .topbar-right { gap: 8px; }
+  .indices-viewall-btn svg { display: none; }
 }
 
 @media (max-width: 480px) {
-  .indices-topbar {
-    padding: 8px;
-  }
-
-  .indices-list {
-    gap: 12px;
-  }
-
-  .index-item {
-    min-width: 85px;
-  }
-
-  .index-value {
-    font-size: 12px;
-  }
-
-  .market-status {
-    padding: 6px 10px;
-    gap: 3px;
-  }
-
-  .indices-viewall-btn {
-    padding: 6px 8px;
-    font-size: 11px;
-  }
+  .indices-topbar { padding: 5px 8px; }
+  .indices-list { gap: 10px; }
+  .index-value { font-size: 11px; }
 }

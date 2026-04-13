@@ -4,7 +4,7 @@ Stores cached top gainers/losers data to avoid repeated broker API calls
 """
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Index
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -22,6 +22,13 @@ Base = declarative_base()
 Base.query = db_session.query_property()
 
 
+def get_ist_time():
+    """Get current time in IST (UTC+5:30)"""
+    utc_now = datetime.now(timezone.utc)
+    ist = timezone(timedelta(hours=5, minutes=30))
+    return utc_now.astimezone(ist).replace(tzinfo=None)
+
+
 class TopMoversCache(Base):
     """Cache for top gainers/losers data"""
     __tablename__ = 'top_movers_cache'
@@ -35,7 +42,7 @@ class TopMoversCache(Base):
     change_amount = Column(Float)
     volume = Column(Integer)
     mover_type = Column(String)  # 'gainer' or 'loser'
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    timestamp = Column(DateTime, default=get_ist_time, index=True)
 
     __table_args__ = (
         Index('idx_exchange_timestamp', 'exchange', 'timestamp'),
@@ -52,7 +59,7 @@ def init_db():
 def clear_stale_cache(exchange: str = None, max_age_minutes: int = 5):
     """Clear cache entries older than max_age_minutes"""
     try:
-        cutoff_time = datetime.utcnow() - timedelta(minutes=max_age_minutes)
+        cutoff_time = get_ist_time() - timedelta(minutes=max_age_minutes)
         query = db_session.query(TopMoversCache).filter(TopMoversCache.timestamp < cutoff_time)
 
         if exchange:
@@ -76,7 +83,7 @@ def get_cached_movers(exchange: str, max_age_minutes: int = 5) -> dict | None:
     Returns None if cache is stale or doesn't exist
     """
     try:
-        cutoff_time = datetime.utcnow() - timedelta(minutes=max_age_minutes)
+        cutoff_time = get_ist_time() - timedelta(minutes=max_age_minutes)
 
         gainers = (
             db_session.query(TopMoversCache)
@@ -121,7 +128,7 @@ def save_movers_cache(exchange: str, gainers: list, losers: list):
         db_session.query(TopMoversCache).filter(TopMoversCache.exchange == exchange).delete()
         db_session.commit()
 
-        now = datetime.utcnow()
+        now = get_ist_time()
 
         # Add gainers
         for gainer in gainers:

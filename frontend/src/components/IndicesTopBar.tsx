@@ -114,6 +114,7 @@ export const IndicesTopBar: React.FC = () => {
   return (
     <div className="indices-topbar">
       <div className="indices-topbar-content">
+        <div className="indices-left">
         <div className="indices-list">
           {topIndices.map((index) => {
             const isUp = index.change_percent >= 0;
@@ -142,6 +143,16 @@ export const IndicesTopBar: React.FC = () => {
           })}
         </div>
 
+        <button
+          className="indices-viewall-btn"
+          onClick={() => navigate('/indices')}
+          title="View all indices"
+        >
+          <TrendingUp size={16} />
+          View All
+        </button>
+        </div>
+
         <div className="topbar-right">
           <div className={`market-status ${marketStatus.isOpen ? 'open' : 'closed'}`}>
             <div className="status-indicator">
@@ -154,15 +165,6 @@ export const IndicesTopBar: React.FC = () => {
             </div>
             <div className="time-remaining">{marketStatus.timeRemaining}</div>
           </div>
-
-          <button
-            className="indices-viewall-btn"
-            onClick={() => navigate('/indices')}
-            title="View all indices"
-          >
-            <TrendingUp size={16} />
-            View All
-          </button>
         </div>
       </div>
     </div>

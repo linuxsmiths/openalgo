@@ -257,11 +257,11 @@ export function TopMovers() {
                           <td className="px-2 py-2 text-right">
                             ₹{mover.ltp.toFixed(2)}
                           </td>
-                          <td className="px-2 py-2 text-right font-semibold text-green-600">
-                            +{mover.change_percent.toFixed(2)}%
+                          <td className={`px-2 py-2 text-right font-semibold ${mover.change_percent >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {mover.change_percent > 0 ? '+' : ''}{mover.change_percent.toFixed(2)}%
                           </td>
-                          <td className="px-2 py-2 text-right text-green-600">
-                            +₹{mover.change_amount.toFixed(2)}
+                          <td className={`px-2 py-2 text-right ${mover.change_amount >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {mover.change_amount > 0 ? '+' : ''}₹{mover.change_amount.toFixed(2)}
                           </td>
                           <td className="px-2 py-2 text-right text-gray-500">
                             {(mover.volume / 1000000).toFixed(2)}M
@@ -351,11 +351,11 @@ export function TopMovers() {
                           <td className="px-2 py-2 text-right">
                             ₹{mover.ltp.toFixed(2)}
                           </td>
-                          <td className="px-2 py-2 text-right font-semibold text-red-600">
-                            {mover.change_percent.toFixed(2)}%
+                          <td className={`px-2 py-2 text-right font-semibold ${mover.change_percent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {mover.change_percent > 0 ? '+' : ''}{mover.change_percent.toFixed(2)}%
                           </td>
-                          <td className="px-2 py-2 text-right text-red-600">
-                            ₹{mover.change_amount.toFixed(2)}
+                          <td className={`px-2 py-2 text-right ${mover.change_amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {mover.change_amount > 0 ? '+' : ''}₹{mover.change_amount.toFixed(2)}
                           </td>
                           <td className="px-2 py-2 text-right text-gray-500">
                             {(mover.volume / 1000000).toFixed(2)}M

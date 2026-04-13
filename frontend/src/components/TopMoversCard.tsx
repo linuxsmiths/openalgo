@@ -94,11 +94,11 @@ export function TopMoversCard() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-green-600">
-                        +{mover.change_percent.toFixed(2)}%
+                      <p className={`text-sm font-semibold ${mover.change_percent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {mover.change_percent > 0 ? '+' : ''}{mover.change_percent.toFixed(2)}%
                       </p>
                       <p className="text-xs text-gray-500">
-                        +₹{mover.change_amount.toFixed(2)}
+                        {mover.change_amount > 0 ? '+' : ''}₹{mover.change_amount.toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -124,11 +124,11 @@ export function TopMoversCard() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-red-600">
-                        {mover.change_percent.toFixed(2)}%
+                      <p className={`text-sm font-semibold ${mover.change_percent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {mover.change_percent > 0 ? '+' : ''}{mover.change_percent.toFixed(2)}%
                       </p>
                       <p className="text-xs text-gray-500">
-                        ₹{mover.change_amount.toFixed(2)}
+                        {mover.change_amount > 0 ? '+' : ''}₹{mover.change_amount.toFixed(2)}
                       </p>
                     </div>
                   </div>
