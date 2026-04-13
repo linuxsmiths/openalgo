@@ -12,23 +12,24 @@ import {
 describe('Navigation Config', () => {
   describe('primaryNavItems', () => {
     it('contains visible desktop navigation items', () => {
-      expect(primaryNavItems).toHaveLength(7)
+      expect(primaryNavItems).toHaveLength(5)
 
       const labels = primaryNavItems.map((item) => item.label)
       expect(labels).toContain('Dashboard')
       expect(labels).toContain('Orderbook')
       expect(labels).toContain('Holdings')
       expect(labels).toContain('Positions')
-      expect(labels).toContain('Top Movers')
       expect(labels).toContain('Action Center')
     })
   })
 
   describe('secondaryNavItems', () => {
     it('contains hidden items under More menu', () => {
-      expect(secondaryNavItems).toHaveLength(4)
+      expect(secondaryNavItems).toHaveLength(6)
 
       const labels = secondaryNavItems.map((item) => item.label)
+      expect(labels).toContain('Top Movers')
+      expect(labels).toContain('Indices')
       expect(labels).toContain('Platforms')
       expect(labels).toContain('Logs')
       expect(labels).toContain('Tools')

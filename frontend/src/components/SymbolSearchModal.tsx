@@ -106,7 +106,6 @@ export const SymbolSearchModal: React.FC<SymbolSearchModalProps> = ({ onClose, o
             value={query}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            autoFocus
           />
           {isLoading && <Loader size={18} className="spinner" />}
         </div>
