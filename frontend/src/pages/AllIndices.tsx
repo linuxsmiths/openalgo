@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowUp, ArrowDown, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { tradingApi } from '@/api/trading';

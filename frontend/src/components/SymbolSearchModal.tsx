@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react'
+import type React from 'react'
+import { useState, useCallback } from 'react'
 import { Search, X, Loader } from 'lucide-react'
 import { tradingApi } from '@/api/trading'
 import './SymbolSearchModal.css'
