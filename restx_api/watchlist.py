@@ -239,15 +239,24 @@ class GetWatchlist(Resource):
             watchlist_items = []
             for quote in quotes_data:
                 if quote:
+                    # Extract data from nested 'data' key (broker format)
+                    quote_data = quote.get('data', {})
+                    ltp = float(quote_data.get('ltp', 0)) if quote_data.get('ltp') else 0
+                    prev_close = float(quote_data.get('prev_close', 0)) if quote_data.get('prev_close') else 0
+                    
+                    # Calculate change amount and percent
+                    change_amount = ltp - prev_close if prev_close else 0
+                    change_percent = ((ltp - prev_close) / prev_close * 100) if prev_close else 0
+                    
                     watchlist_items.append({
                         'symbol': quote.get('symbol', ''),
                         'exchange': quote.get('exchange', 'NSE'),
-                        'ltp': float(quote.get('ltp', 0)) if quote.get('ltp') else 0,
-                        'change_amount': float(quote.get('change_amount', 0)) if quote.get('change_amount') else 0,
-                        'change_percent': float(quote.get('change_percent', 0)) if quote.get('change_percent') else 0,
-                        'bid': float(quote.get('bid', 0)) if quote.get('bid') else 0,
-                        'ask': float(quote.get('ask', 0)) if quote.get('ask') else 0,
-                        'volume': float(quote.get('volume', 0)) if quote.get('volume') else 0,
+                        'ltp': ltp,
+                        'change_amount': change_amount,
+                        'change_percent': change_percent,
+                        'bid': float(quote_data.get('bid', 0)) if quote_data.get('bid') else 0,
+                        'ask': float(quote_data.get('ask', 0)) if quote_data.get('ask') else 0,
+                        'volume': float(quote_data.get('volume', 0)) if quote_data.get('volume') else 0,
                     })
             
             return ({
