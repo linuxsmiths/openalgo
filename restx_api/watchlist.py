@@ -226,7 +226,22 @@ class GetWatchlist(Resource):
             instruments = [{'symbol': sym['symbol'], 'exchange': sym['exchange']} for sym in symbols]
             
             # Fetch quotes
-            quotes_data = broker_data.get_multiquotes(instruments)
+            try:
+                quotes_data = broker_data.get_multiquotes(instruments)
+            except Exception as e:
+                error_msg = str(e)
+                # Check if it's an authentication error
+                if 'Authentication failed' in error_msg or 'auth token' in error_msg.lower():
+                    return ({
+                        'status': 'error',
+                        'message': 'Broker session expired. Please re-authenticate.',
+                        'auth_error': True,
+                    }), 401
+                # Other errors
+                return ({
+                    'status': 'error',
+                    'message': f'Error fetching quotes: {error_msg}'
+                }), 500
             
             if not quotes_data:
                 return ({
@@ -248,6 +263,17 @@ class GetWatchlist(Resource):
                     change_amount = ltp - prev_close if prev_close else 0
                     change_percent = ((ltp - prev_close) / prev_close * 100) if prev_close else 0
                     
+                    # Extract depth data
+                    depth = quote_data.get('depth', {})
+                    buy_orders = depth.get('buy', [])
+                    sell_orders = depth.get('sell', [])
+                    
+                    # Calculate total buyers/sellers
+                    total_buy_quantity = sum(order.get('quantity', 0) for order in buy_orders)
+                    total_sell_quantity = sum(order.get('quantity', 0) for order in sell_orders)
+                    total_buy_orders = sum(order.get('orders', 0) for order in buy_orders)
+                    total_sell_orders = sum(order.get('orders', 0) for order in sell_orders)
+                    
                     watchlist_items.append({
                         'symbol': quote.get('symbol', ''),
                         'exchange': quote.get('exchange', 'NSE'),
@@ -257,6 +283,22 @@ class GetWatchlist(Resource):
                         'bid': float(quote_data.get('bid', 0)) if quote_data.get('bid') else 0,
                         'ask': float(quote_data.get('ask', 0)) if quote_data.get('ask') else 0,
                         'volume': float(quote_data.get('volume', 0)) if quote_data.get('volume') else 0,
+                        # Day high/low/open
+                        'high': float(quote_data.get('high', 0)) if quote_data.get('high') else 0,
+                        'low': float(quote_data.get('low', 0)) if quote_data.get('low') else 0,
+                        'open': float(quote_data.get('open', 0)) if quote_data.get('open') else 0,
+                        # Market depth
+                        'depth': {
+                            'buy': buy_orders,
+                            'sell': sell_orders,
+                        },
+                        'total_buy_quantity': total_buy_quantity,
+                        'total_sell_quantity': total_sell_quantity,
+                        'total_buy_orders': total_buy_orders,
+                        'total_sell_orders': total_sell_orders,
+                        # 52-week high/low (to be calculated separately)
+                        'week_52_high': 0,  # TODO: Calculate from historical data
+                        'week_52_low': 0,   # TODO: Calculate from historical data
                     })
             
             return ({

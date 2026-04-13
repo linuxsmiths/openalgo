@@ -15,6 +15,19 @@ interface WatchlistSymbol {
   bid: number
   ask: number
   volume: number
+  high: number
+  low: number
+  open: number
+  depth: {
+    buy: Array<{ price: number; quantity: number; orders: number }>
+    sell: Array<{ price: number; quantity: number; orders: number }>
+  }
+  total_buy_quantity: number
+  total_sell_quantity: number
+  total_buy_orders: number
+  total_sell_orders: number
+  week_52_high: number
+  week_52_low: number
 }
 
 export const Watchlist: React.FC = () => {
@@ -23,6 +36,7 @@ export const Watchlist: React.FC = () => {
   const [searchOpen, setSearchOpen] = useState(false)
   const [sortField, setSortField] = useState<'symbol' | 'ltp' | 'change_percent'>('symbol')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null)
 
   const {
     isLoading,
@@ -187,62 +201,157 @@ export const Watchlist: React.FC = () => {
             {sortedSymbols.map((symbol) => {
               const isUp = symbol.change_percent >= 0
               const changeColor = isUp ? '#10b981' : '#ef4444'
+              const isExpanded = expandedSymbol === `${symbol.symbol}-${symbol.exchange}`
 
               return (
-                <div key={`${symbol.symbol}-${symbol.exchange}`} className={`table-row ${isUp ? 'up' : 'down'}`}>
-                  <div className="col-symbol">
-                    <span className="symbol-name">{symbol.symbol}</span>
-                    <span className="exchange">{symbol.exchange}</span>
-                  </div>
+                <React.Fragment key={`${symbol.symbol}-${symbol.exchange}`}>
+                  <div 
+                    className={`table-row ${isUp ? 'up' : 'down'} ${isExpanded ? 'expanded' : ''}`}
+                    onClick={() => setExpandedSymbol(isExpanded ? null : `${symbol.symbol}-${symbol.exchange}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div className="col-symbol">
+                      <span className="symbol-name">{symbol.symbol}</span>
+                      <span className="exchange">{symbol.exchange}</span>
+                    </div>
 
-                  <div className="col-price">
-                    {symbol.ltp.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </div>
+                    <div className="col-price">
+                      {symbol.ltp.toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </div>
 
-                  <div className="col-bid">
-                    {symbol.bid.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </div>
+                    <div className="col-bid">
+                      {symbol.bid.toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </div>
 
-                  <div className="col-ask">
-                    {symbol.ask.toLocaleString('en-IN', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </div>
+                    <div className="col-ask">
+                      {symbol.ask.toLocaleString('en-IN', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </div>
 
-                  <div className="col-change" style={{ color: changeColor }}>
-                    <div className="change-details">
-                      {isUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                      <span>{Math.abs(symbol.change_amount).toFixed(2)}</span>
+                    <div className="col-change" style={{ color: changeColor }}>
+                      <div className="change-details">
+                        {isUp ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                        <span>{Math.abs(symbol.change_amount).toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <div className="col-percent" style={{ color: changeColor }}>
+                      <span className={`percent-badge ${isUp ? 'up' : 'down'}`}>
+                        {isUp ? '+' : ''}{symbol.change_percent.toFixed(2)}%
+                      </span>
+                    </div>
+
+                    <div className="col-volume">
+                      {(symbol.volume / 1000).toFixed(0)}K
+                    </div>
+
+                    <div className="col-action" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="remove-btn"
+                        onClick={() => handleRemove(symbol.symbol, symbol.exchange)}
+                        title="Remove from watchlist"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
 
-                  <div className="col-percent" style={{ color: changeColor }}>
-                    <span className={`percent-badge ${isUp ? 'up' : 'down'}`}>
-                      {isUp ? '+' : ''}{symbol.change_percent.toFixed(2)}%
-                    </span>
-                  </div>
+                  {isExpanded && (
+                    <div className="expanded-row">
+                      <div className="expanded-content">
+                        {/* Price Range Info */}
+                        <div className="price-ranges">
+                          <div className="range-item">
+                            <span className="range-label">Day Range:</span>
+                            <span className="range-value">
+                              ₹{symbol.low.toFixed(2)} - ₹{symbol.high.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="range-item">
+                            <span className="range-label">Open:</span>
+                            <span className="range-value">₹{symbol.open.toFixed(2)}</span>
+                          </div>
+                          {symbol.week_52_high > 0 && symbol.week_52_low > 0 && (
+                            <div className="range-item">
+                              <span className="range-label">52W Range:</span>
+                              <span className="range-value">
+                                ₹{symbol.week_52_low.toFixed(2)} - ₹{symbol.week_52_high.toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
 
-                  <div className="col-volume">
-                    {(symbol.volume / 1000).toFixed(0)}K
-                  </div>
+                        {/* Market Depth */}
+                        <div className="depth-section">
+                          <h4>Market Depth</h4>
+                          <div className="depth-summary">
+                            <div className="depth-stat buyers">
+                              <span className="stat-label">Total Buyers:</span>
+                              <span className="stat-value">{symbol.total_buy_orders} orders ({(symbol.total_buy_quantity / 1000).toFixed(1)}K qty)</span>
+                            </div>
+                            <div className="depth-stat sellers">
+                              <span className="stat-label">Total Sellers:</span>
+                              <span className="stat-value">{symbol.total_sell_orders} orders ({(symbol.total_sell_quantity / 1000).toFixed(1)}K qty)</span>
+                            </div>
+                          </div>
 
-                  <div className="col-action">
-                    <button
-                      className="remove-btn"
-                      onClick={() => handleRemove(symbol.symbol, symbol.exchange)}
-                      title="Remove from watchlist"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
+                          {/* Depth Visualization */}
+                          <div className="depth-viz">
+                            <div className="depth-side buy-side">
+                              <div className="depth-header">Bid</div>
+                              {symbol.depth.buy.slice(0, 5).map((level, idx) => {
+                                const maxQty = Math.max(
+                                  ...symbol.depth.buy.slice(0, 5).map(l => l.quantity),
+                                  ...symbol.depth.sell.slice(0, 5).map(l => l.quantity)
+                                )
+                                const widthPercent = (level.quantity / maxQty) * 100
+                                return (
+                                  <div key={idx} className="depth-level">
+                                    <span className="depth-price">₹{level.price.toFixed(2)}</span>
+                                    <div className="depth-bar-container">
+                                      <div className="depth-bar buy" style={{ width: `${widthPercent}%` }}></div>
+                                    </div>
+                                    <span className="depth-qty">{level.quantity}</span>
+                                    <span className="depth-orders">({level.orders})</span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+
+                            <div className="depth-side sell-side">
+                              <div className="depth-header">Ask</div>
+                              {symbol.depth.sell.slice(0, 5).map((level, idx) => {
+                                const maxQty = Math.max(
+                                  ...symbol.depth.buy.slice(0, 5).map(l => l.quantity),
+                                  ...symbol.depth.sell.slice(0, 5).map(l => l.quantity)
+                                )
+                                const widthPercent = (level.quantity / maxQty) * 100
+                                return (
+                                  <div key={idx} className="depth-level">
+                                    <span className="depth-price">₹{level.price.toFixed(2)}</span>
+                                    <div className="depth-bar-container">
+                                      <div className="depth-bar sell" style={{ width: `${widthPercent}%` }}></div>
+                                    </div>
+                                    <span className="depth-qty">{level.quantity}</span>
+                                    <span className="depth-orders">({level.orders})</span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </React.Fragment>
               )
             })}
           </div>

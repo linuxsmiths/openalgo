@@ -315,6 +315,11 @@ class BrokerData:
                     "prev_close": float(quote.get("close", 0)),
                     "volume": int(quote.get("tradeVolume", 0)),
                     "oi": int(quote.get("opnInterest", 0)),
+                    # Include full market depth (5 levels each)
+                    "depth": {
+                        "buy": [{"price": float(b.get("price", 0)), "quantity": int(b.get("quantity", 0)), "orders": int(b.get("orders", 0))} for b in bids],
+                        "sell": [{"price": float(s.get("price", 0)), "quantity": int(s.get("quantity", 0)), "orders": int(s.get("orders", 0))} for s in asks],
+                    }
                 },
             }
             results.append(result_item)

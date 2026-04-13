@@ -115,7 +115,20 @@ class Indices(Resource):
                 }, 401
 
             # Fetch indices data
-            result = get_indices(apikey)
+            try:
+                result = get_indices(apikey)
+            except Exception as e:
+                error_msg = str(e)
+                # Check if it's an authentication error
+                if 'Authentication failed' in error_msg or 'auth token' in error_msg.lower():
+                    logger.warning(f"Auth error in indices: {error_msg}")
+                    return {
+                        'status': 'error',
+                        'message': 'Broker session expired. Please re-authenticate.',
+                        'auth_error': True,
+                    }, 401
+                # Re-raise other exceptions to be caught by outer handler
+                raise
 
             return {
                 'status': 'success',
