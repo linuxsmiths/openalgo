@@ -109,14 +109,16 @@ export const IndicesTopBar: React.FC = () => {
     enabled: !!apiKey,
   });
 
-  if (!apiKey || topIndices.length === 0) return null;
+  if (!apiKey) return null;
 
   return (
     <div className="indices-topbar">
       <div className="indices-topbar-content">
-        <div className="indices-left">
-        <div className="indices-list">
-          {topIndices.map((index) => {
+        {topIndices.length > 0 ? (
+          <>
+            <div className="indices-left">
+            <div className="indices-list">
+              {topIndices.map((index) => {
             const isUp = index.change_percent >= 0;
             const color = isUp ? '#10b981' : '#ef4444';
 
@@ -166,6 +168,10 @@ export const IndicesTopBar: React.FC = () => {
             <div className="time-remaining">{marketStatus.timeRemaining}</div>
           </div>
         </div>
+          </>
+        ) : (
+          <div className="text-xs text-gray-500">Loading market data...</div>
+        )}
       </div>
     </div>
   );

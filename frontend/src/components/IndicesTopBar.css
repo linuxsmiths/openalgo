@@ -3,9 +3,13 @@
   border-bottom: 2px solid #e5e7eb;
   padding: 6px 16px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  position: sticky;
-  top: 0;
+  position: fixed;
+  top: 56px; /* Below navbar (h-14 = 56px) */
+  left: 0;
+  right: 0;
+  width: 100%;
   z-index: 40;
+  background-clip: padding-box;
 }
 
 .indices-topbar-content {
