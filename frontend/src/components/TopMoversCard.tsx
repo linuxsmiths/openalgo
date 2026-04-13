@@ -26,6 +26,9 @@ export function TopMoversCard() {
   useEffect(() => {
     if (apiKey) {
       fetchTopMovers()
+      // Auto-refresh every 5 seconds
+      const interval = setInterval(fetchTopMovers, 5000)
+      return () => clearInterval(interval)
     }
   }, [apiKey])
 
