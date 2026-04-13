@@ -92,7 +92,7 @@ export const SymbolSearchModal: React.FC<SymbolSearchModalProps> = ({ onClose, o
       <div className="modal-content">
         <div className="modal-header">
           <h2>Add Symbol to Watchlist</h2>
-          <button className="close-btn" onClick={onClose}>
+          <button type="button" className="close-btn" onClick={onClose}>
             <X size={20} />
           </button>
         </div>

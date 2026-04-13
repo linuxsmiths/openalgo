@@ -30,7 +30,7 @@ export function TopMoversCard() {
       const interval = setInterval(fetchTopMovers, 5000)
       return () => clearInterval(interval)
     }
-  }, [apiKey])
+  }, [apiKey, fetchTopMovers])
 
   const fetchTopMovers = async () => {
     if (!apiKey) return

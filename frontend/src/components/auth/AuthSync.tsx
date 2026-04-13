@@ -69,7 +69,7 @@ export function AuthSync({ children }: AuthSyncProps) {
           logout()
           clearCapabilities()
         }
-      } catch (error) {
+      } catch (_error) {
         // On error, don't change auth state - let existing state persist
       } finally {
         setIsChecking(false)

@@ -147,6 +147,7 @@ export const IndicesTopBar: React.FC = () => {
         </div>
 
         <button
+          type="button"
           className="indices-viewall-btn"
           onClick={() => navigate('/indices')}
           title="View all indices"
