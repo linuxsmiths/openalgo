@@ -105,7 +105,7 @@ export const IndicesTopBar: React.FC = () => {
         return null;
       }
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 1000, // Refresh every 1 second
     enabled: !!apiKey,
   });
 

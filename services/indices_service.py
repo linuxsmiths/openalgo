@@ -35,17 +35,18 @@ def get_indices(api_key: str) -> Dict[str, Any]:
         Dictionary with indices data
     """
     try:
-        # Step 1: Check cache first
-        cached = get_cached_indices(max_age_minutes=5)
-        if cached:
-            logger.info("Returning cached indices data")
-            return {
-                'indices': cached['indices'],
-                'cached': True,
-                'cached_at': cached['cached_at'],
-            }
+        # Skip cache for indices - need real-time data for banner
+        # (Uncomment below to enable 5-min caching if needed)
+        # cached = get_cached_indices(max_age_minutes=5)
+        # if cached:
+        #     logger.info("Returning cached indices data")
+        #     return {
+        #         'indices': cached['indices'],
+        #         'cached': True,
+        #         'cached_at': cached['cached_at'],
+        #     }
 
-        logger.info("Cache miss for indices, fetching fresh data")
+        logger.info("Fetching fresh indices data")
 
         # Step 2: Get broker and auth token using API key
         auth_token, broker_name = get_auth_token_broker(api_key)
@@ -151,12 +152,12 @@ def get_indices(api_key: str) -> Dict[str, Any]:
 
         logger.info(f"Processed {len(indices_data)} indices successfully")
 
-        # Step 8: Cache results
-        try:
-            save_indices_cache(indices_data)
-        except Exception as e:
-            logger.exception(f"Error saving cache: {e}")
-            # Continue anyway, cache is not critical
+        # Skip caching for real-time indices
+        # (Uncomment below to enable 5-min caching if needed)
+        # try:
+        #     save_indices_cache(indices_data)
+        # except Exception as e:
+        #     logger.exception(f"Error saving cache: {e}")
 
         return {
             'indices': indices_data,

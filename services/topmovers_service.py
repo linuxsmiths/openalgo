@@ -313,16 +313,18 @@ def get_top_movers(api_key: str, index: str = 'NIFTY50', limit: int = 10) -> Dic
         # Step 8: Sort by % change
         sorted_movers = sorted(movers_data, key=lambda x: x['change_percent'], reverse=True)
 
-        # Step 9: Extract top gainers and losers
-        gainers = sorted_movers[:limit]
-        losers = sorted_movers[-limit:][::-1]  # Reverse to show biggest losers first
-
-        # Step 10: Cache results
+        # Step 9: Cache all results (not limited)
         try:
-            save_movers_cache(index, gainers, losers)
+            all_gainers = sorted_movers
+            all_losers = sorted_movers[::-1]  # Reverse all results for losers
+            save_movers_cache(index, all_gainers, all_losers)
         except Exception as e:
             logger.exception(f"Error saving cache: {e}")
             # Continue anyway, cache is not critical
+
+        # Step 10: Extract top gainers and losers for this request
+        gainers = sorted_movers[:limit]
+        losers = sorted_movers[-limit:][::-1]  # Reverse to show biggest losers first
 
         logger.info(f"Successfully fetched top {limit} gainers and losers for {index}")
 
