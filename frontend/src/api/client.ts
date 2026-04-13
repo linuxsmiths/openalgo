@@ -30,22 +30,28 @@ apiClient.interceptors.request.use(
   }
 )
 
+// Flag to prevent multiple redirects/alerts during auth failure
+let isRedirecting = false
+
 // Response interceptor
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized - show message and redirect to login
+    if (error.response?.status === 401 && !isRedirecting) {
+      isRedirecting = true
+
       const authError = error.response?.data?.auth_error
       const message = error.response?.data?.message || 'Session expired. Please log in again.'
 
-      // Show alert if auth_error flag is set (token expired)
       if (authError) {
+        // Broker session expired: show message, then logout (clears Flask session)
+        // so user is forced to re-authenticate fully (not bounced back to dashboard)
         alert(message)
+        window.location.href = '/auth/logout'
+      } else {
+        // Regular session expiry: just go to login
+        window.location.href = '/login'
       }
-
-      // Redirect to login
-      window.location.href = '/login'
     }
     return Promise.reject(error)
   }

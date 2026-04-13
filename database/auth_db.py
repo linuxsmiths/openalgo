@@ -825,8 +825,14 @@ def get_broker_name(provided_api_key):
                 # Cache the broker name
                 broker_cache[provided_api_key] = auth_obj.broker
                 return auth_obj.broker
+            elif auth_obj and auth_obj.is_revoked:
+                logger.warning(
+                    f"Broker session expired for user '{user_id}'. "
+                    f"Please re-authenticate with your broker to refresh the session token."
+                )
+                return None
             else:
-                logger.warning(f"No valid broker found for user_id '{user_id}'.")
+                logger.warning(f"No broker authentication found for user '{user_id}'.")
                 return None
         except Exception as e:
             logger.exception(f"Error while querying the database for broker name: {e}")
@@ -858,7 +864,7 @@ def get_auth_token_broker(provided_api_key, include_feed_token=False):
                 auth_obj = Auth.query.filter_by(name=user_id).first()
                 if auth_obj and auth_obj.is_revoked:
                     # Token was revoked, remove from cache
-                    del auth_cache[cache_key]
+                    auth_cache.pop(cache_key, None)
                     logger.warning(f"Cached auth token was revoked for user_id '{user_id}'.")
                     return (None, None, None) if include_feed_token else (None, None)
                 # Not revoked, return cached result
@@ -867,7 +873,7 @@ def get_auth_token_broker(provided_api_key, include_feed_token=False):
             except Exception as e:
                 logger.exception(f"Error checking revocation status: {e}")
                 # On error, don't use cache
-                del auth_cache[cache_key]
+                auth_cache.pop(cache_key, None)
 
     # Cache miss or revocation check failed - fetch from database
     user_id = verify_api_key(provided_api_key)
@@ -889,12 +895,20 @@ def get_auth_token_broker(provided_api_key, include_feed_token=False):
                 auth_cache[cache_key] = result
                 logger.debug(f"Auth token cached for user_id: {user_id}")
                 return result
-            else:
-                # Cache the negative result to prevent repeated DB queries and log spam
-                # (e.g., orphaned users with revoked sessions polled by background services)
+            elif auth_obj and auth_obj.is_revoked:
+                # Cache the negative result to prevent repeated DB queries
                 negative_result = (None, None, None) if include_feed_token else (None, None)
                 auth_cache[cache_key] = negative_result
-                logger.warning(f"No valid auth token or broker found for user_id '{user_id}'. Cached negative result.")
+                logger.warning(
+                    f"Broker session expired for user '{user_id}'. "
+                    f"Please re-authenticate with your broker to refresh the session."
+                )
+                return negative_result
+            else:
+                # Cache the negative result for orphaned/missing auth records
+                negative_result = (None, None, None) if include_feed_token else (None, None)
+                auth_cache[cache_key] = negative_result
+                logger.warning(f"No broker authentication found for user '{user_id}'.")
                 return negative_result
         except Exception as e:
             logger.exception(f"Error while querying the database for auth token and broker: {e}")

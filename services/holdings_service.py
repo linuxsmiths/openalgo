@@ -212,7 +212,11 @@ def get_holdings(
     if api_key and not (auth_token and broker):
         AUTH_TOKEN, broker_name = get_auth_token_broker(api_key)
         if AUTH_TOKEN is None:
-            return False, {"status": "error", "message": "Invalid openalgo apikey"}, 403
+            return False, {
+                "status": "error",
+                "message": "Broker session expired. Please re-authenticate.",
+                "auth_error": True,
+            }, 401
         original_data = {"apikey": api_key}
         return get_holdings_with_auth(AUTH_TOKEN, broker_name, original_data)
 

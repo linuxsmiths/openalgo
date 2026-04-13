@@ -208,16 +208,17 @@ def check_session_validity(f):
             if is_ajax:
                 # Return JSON response for AJAX requests instead of redirect
                 # This prevents consuming rate limits on the login endpoint
-                logger.info("Invalid session detected - returning 401 for AJAX request")
+                logger.info("Session expired - broker credentials need to be refreshed")
                 return jsonify(
                     {
                         "status": "error",
                         "error": "session_expired",
-                        "message": "Your session has expired. Please log in again.",
+                        "auth_error": True,  # Signal frontend to redirect to login
+                        "message": "Your broker session has expired. Please re-authenticate to refresh credentials.",
                     }
                 ), 401
 
-            logger.info("Invalid session detected - redirecting to login")
+            logger.info("Session expired - redirecting to broker authentication")
             return redirect(url_for("auth.login"))
         logger.debug("Session validated successfully")
         return f(*args, **kwargs)

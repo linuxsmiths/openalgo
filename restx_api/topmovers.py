@@ -121,12 +121,22 @@ class TopMovers(Resource):
                 }, 400
 
             # Validate API key
-            from database.auth_db import verify_api_key
+            from database.auth_db import verify_api_key, get_auth_token_broker
             user_id = verify_api_key(apikey)
             if not user_id:
                 return {
                     'status': 'error',
                     'message': 'Invalid or expired API key',
+                    'auth_error': True,
+                }, 401
+            
+            # Check if broker session is still valid
+            auth_token, broker_name = get_auth_token_broker(apikey)
+            if not broker_name or not auth_token:
+                return {
+                    'status': 'error',
+                    'message': 'Broker session expired. Please re-authenticate.',
+                    'auth_error': True,
                 }, 401
 
             # Fetch top movers (pass API key, not username)
