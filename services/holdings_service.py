@@ -185,7 +185,6 @@ def get_holdings_with_auth(
         logger.error(f"[HOLDINGS] Traceback: {traceback.format_exc()}")
         return False, {"status": "error", "message": f"Data structure error: {str(e)}"}, 500
     except Exception as e:
-<<<<<<< HEAD
         if is_broker_auth_error(e):
             logger.warning(f"[HOLDINGS] Auth error processing holdings data: {e}")
             return (
@@ -199,9 +198,6 @@ def get_holdings_with_auth(
             )
         logger.error(f"[HOLDINGS] Unexpected error processing holdings data: {e}")
         logger.error(f"[HOLDINGS] Traceback: {traceback.format_exc()}")
-=======
-        logger.exception(f"Error processing holdings data: {e}")
->>>>>>> upstream/main
         return False, {"status": "error", "message": str(e)}, 500
 
 
