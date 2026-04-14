@@ -56,23 +56,15 @@ fetch_upstream() {
     fi
 }
 
-# Auto-resolve frontend/dist conflicts in favor of the current branch
+# Reset frontend/dist back to the current branch state
 resolve_frontend_dist_conflicts() {
-    local dist_conflicts
-
-    dist_conflicts=$(git diff --name-only --diff-filter=U -- frontend/dist 2>/dev/null || true)
-
-    if [ -z "$dist_conflicts" ]; then
-        print_success "No frontend/dist conflicts to ignore"
+    if ! git ls-files -- frontend/dist | grep -q . && ! git ls-files -u -- frontend/dist | grep -q .; then
+        print_success "No frontend/dist paths to drop"
         return 0
     fi
 
-    print_warning "Auto-resolving frontend/dist conflicts in favor of local files"
-    while IFS= read -r file; do
-        [ -z "$file" ] && continue
-        git checkout --ours -- "$file"
-        git add -- "$file"
-    done <<< "$dist_conflicts"
+    print_warning "Resetting frontend/dist to the current branch state"
+    git reset HEAD -- frontend/dist >/dev/null 2>&1 || true
 
     return 0
 }
