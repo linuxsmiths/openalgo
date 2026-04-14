@@ -91,3 +91,5 @@ nul
 *~
 .*.sw*
 
+# vim tags
+tags
