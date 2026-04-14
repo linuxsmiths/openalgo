@@ -56,75 +56,76 @@ fetch_upstream() {
     fi
 }
 
-# Setup merge attributes to ignore frontend/dist
-setup_merge_attributes() {
-    print_header "Configuring Merge Strategy"
+# Auto-resolve frontend/dist conflicts in favor of the current branch
+resolve_frontend_dist_conflicts() {
+    local dist_conflicts
 
-    # Create temporary .gitattributes if it doesn't exist or append to existing
-    if ! grep -q "frontend/dist merge=ours" .gitattributes 2>/dev/null; then
-        echo "frontend/dist/** merge=ours" >> .gitattributes
-        print_success "Configured to keep local frontend/dist"
-    else
-        print_success "Merge strategy already configured"
+    dist_conflicts=$(git diff --name-only --diff-filter=U -- frontend/dist 2>/dev/null || true)
+
+    if [ -z "$dist_conflicts" ]; then
+        print_success "No frontend/dist conflicts to ignore"
+        return 0
     fi
 
-    # Configure the 'ours' merge driver (keep our version)
-    git config merge.ours.driver true
+    print_warning "Auto-resolving frontend/dist conflicts in favor of local files"
+    while IFS= read -r file; do
+        [ -z "$file" ] && continue
+        git checkout --ours -- "$file"
+        git add -- "$file"
+    done <<< "$dist_conflicts"
+
+    return 0
 }
 
-# Cleanup merge attributes
-cleanup_merge_attributes() {
-    # Remove the temporary merge attribute if we added it
-    if [ -f .gitattributes ]; then
-        sed -i '/frontend\/dist.*merge=ours/d' .gitattributes
-        # Remove file if empty
-        if [ ! -s .gitattributes ]; then
-            rm -f .gitattributes
-        fi
+# Check for unresolved conflicts outside frontend/dist
+has_remaining_conflicts() {
+    local remaining_conflicts
+    remaining_conflicts=$(git diff --name-only --diff-filter=U | grep -v '^frontend/dist/' || true)
+
+    if [ -n "$remaining_conflicts" ]; then
+        echo "$remaining_conflicts"
+        return 0
     fi
+
+    return 1
 }
 
 # Attempt merge
 attempt_merge() {
     print_header "Merging upstream/main"
+    local merge_message="Merge upstream/main (ignoring frontend/dist changes)"
 
-    # Setup merge strategy to ignore frontend/dist
-    setup_merge_attributes
-
-    # Try merge with strategy to keep our frontend/dist
-    if git merge upstream/main --no-edit -m "Merge upstream/main (keeping local frontend/dist)" 2>&1; then
-        print_success "Merge completed successfully"
-        cleanup_merge_attributes
-        return 0
+    # Start the merge without committing so we can ignore frontend/dist conflicts
+    if git merge upstream/main --no-ff --no-commit 2>&1; then
+        print_success "Merge applied cleanly"
     else
-        # Merge failed, check for other conflicts
         echo ""
         print_warning "Merge conflicts detected"
-        cleanup_merge_attributes
-        return 1
     fi
-}
 
-# Handle remaining conflicts (non-frontend/dist)
-resolve_remaining_conflicts() {
-    print_header "Checking for Remaining Conflicts"
+    # Always resolve frontend/dist conflicts locally
+    resolve_frontend_dist_conflicts
 
-    # Check if there are any unresolved conflicts
-    if git status | grep -q "Unmerged paths"; then
-        print_error "There are conflicts that need manual resolution"
+    # If anything outside frontend/dist is still conflicted, stop here
+    if has_remaining_conflicts; then
+        echo ""
+        print_error "There are conflicts outside frontend/dist that need manual resolution"
         echo ""
         echo "Conflicted files:"
-        git diff --name-only --diff-filter=U
+        git diff --name-only --diff-filter=U | grep -v '^frontend/dist/' || true
         echo ""
-        echo "Please resolve these conflicts manually, then run:"
+        echo "frontend/dist conflicts were ignored automatically."
+        echo "Please resolve the remaining conflicts manually, then run:"
         echo "  git add ."
-        echo "  git commit"
+        echo "  git commit --no-edit"
         echo "  git push origin main"
         return 1
-    else
-        print_success "No remaining conflicts"
-        return 0
     fi
+
+    # Finalize the merge commit now that only frontend/dist was ignored
+    git commit -m "$merge_message"
+    print_success "Merge commit created"
+    return 0
 }
 
 # Rebuild frontend after merge
@@ -184,7 +185,7 @@ main() {
     # Try merge
     if attempt_merge; then
         # Merge successful, rebuild frontend
-        print_success "Merge completed without conflicts"
+        print_success "Merge completed successfully"
 
         echo ""
         echo "Rebuilding frontend with merged changes..."
@@ -204,33 +205,11 @@ main() {
         exit 0
     fi
 
-    # Handle remaining conflicts (non-frontend/dist)
-    if ! resolve_remaining_conflicts; then
-        print_error "Manual conflict resolution needed"
-        echo ""
-        echo "To abort merge and start over:"
-        echo "  git merge --abort"
-        exit 1
-    fi
-
-    # If we get here, conflicts were auto-resolved
-    print_success "All conflicts automatically resolved"
-
+    print_error "Merge aborted due to unresolved non-frontend/dist conflicts"
     echo ""
-    rebuild_frontend
-
-    echo ""
-    if ask_push; then
-        push_changes
-    fi
-
-    print_header "Merge Complete ✓"
-    echo "Upstream changes merged successfully!"
-    echo ""
-    echo "Next steps:"
-    echo "  1. Test the application: uv run app.py"
-    echo "  2. Hard refresh browser (Ctrl+Shift+R)"
-    exit 0
+    echo "To abort merge and start over:"
+    echo "  git merge --abort"
+    exit 1
 }
 
 # Run main
