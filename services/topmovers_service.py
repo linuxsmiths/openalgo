@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 
 from database.auth_db import get_auth_token_broker
 from database.topmovers_cache_db import get_cached_movers, save_movers_cache, clear_stale_cache
-from services.broker_error_utils import is_broker_auth_error
+from services.broker_error_utils import is_broker_auth_error, revoke_broker_session_for_api_key
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -246,6 +246,7 @@ def get_top_movers(api_key: str, index: str = 'NIFTY50', limit: int = 10) -> Dic
             quotes_response = broker_data.get_multiquotes(symbol_list)
         except Exception as e:
             if is_broker_auth_error(e):
+                revoke_broker_session_for_api_key(api_key, e)
                 logger.warning(f"Broker session expired while fetching top movers for {index}: {e}")
                 return {
                     'gainers': [],

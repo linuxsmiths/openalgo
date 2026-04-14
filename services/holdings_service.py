@@ -2,7 +2,7 @@ import importlib
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from database.auth_db import get_auth_token_broker
-from services.broker_error_utils import is_broker_auth_error
+from services.broker_error_utils import is_broker_auth_error, revoke_broker_session_for_api_key
 from utils.logging import get_logger
 
 # Initialize logger
@@ -133,6 +133,8 @@ def get_holdings_with_auth(
 
             # Check if it's an auth error (token expired)
             if is_broker_auth_error(error_msg) or error_code in ["AG8001"]:
+                api_key = original_data.get("apikey") if original_data else None
+                revoke_broker_session_for_api_key(api_key, error_msg or error_code)
                 logger.warning(f"[HOLDINGS] Token authentication error detected. User needs to re-authenticate.")
                 # AG8001 is Angel's "Invalid Token" error code
                 return (
@@ -179,13 +181,15 @@ def get_holdings_with_auth(
                 "data": {"holdings": formatted_holdings, "statistics": formatted_stats},
             },
             200,
-        )
+            )
     except KeyError as e:
         logger.error(f"[HOLDINGS] KeyError - Missing expected data structure: {e}")
         logger.error(f"[HOLDINGS] Traceback: {traceback.format_exc()}")
         return False, {"status": "error", "message": f"Data structure error: {str(e)}"}, 500
     except Exception as e:
         if is_broker_auth_error(e):
+            api_key = original_data.get("apikey") if original_data else None
+            revoke_broker_session_for_api_key(api_key, e)
             logger.warning(f"[HOLDINGS] Auth error processing holdings data: {e}")
             return (
                 False,

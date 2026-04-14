@@ -1,9 +1,13 @@
 import importlib
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from database.auth_db import get_auth_token_broker
+from database.auth_db import get_auth_token_broker, verify_api_key
 from database.token_db import get_token
-from services.broker_error_utils import broker_auth_error_response, is_broker_auth_error
+from services.broker_error_utils import (
+    broker_auth_error_response,
+    is_broker_auth_error,
+    revoke_broker_session_for_api_key,
+)
 from utils.constants import VALID_EXCHANGES
 from utils.logging import get_logger
 
@@ -96,7 +100,12 @@ def import_broker_module(broker_name: str) -> Any | None:
 
 
 def get_quotes_with_auth(
-    auth_token: str, feed_token: str | None, broker: str, symbol: str, exchange: str
+    auth_token: str,
+    feed_token: str | None,
+    broker: str,
+    symbol: str,
+    exchange: str,
+    api_key: str | None = None,
 ) -> tuple[bool, dict[str, Any], int]:
     """
     Get real-time quotes for a symbol using provided auth tokens.
@@ -144,6 +153,7 @@ def get_quotes_with_auth(
         return True, {"status": "success", "data": quotes}, 200
     except Exception as e:
         if is_broker_auth_error(e):
+            revoke_broker_session_for_api_key(api_key, e)
             logger.warning(f"Quote fetch auth error: {e}")
             return broker_auth_error_response()
 
@@ -191,8 +201,17 @@ def get_quotes(
             api_key, include_feed_token=True
         )
         if AUTH_TOKEN is None:
+            if verify_api_key(api_key):
+                return broker_auth_error_response()
             return False, {"status": "error", "message": "Invalid openalgo apikey"}, 403
-        return get_quotes_with_auth(AUTH_TOKEN, FEED_TOKEN, broker_name, symbol, exchange)
+        return get_quotes_with_auth(
+            AUTH_TOKEN,
+            FEED_TOKEN,
+            broker_name,
+            symbol,
+            exchange,
+            api_key=api_key,
+        )
 
     # Case 2: Direct internal call with auth_token and broker
     elif auth_token and broker:
@@ -211,7 +230,11 @@ def get_quotes(
 
 
 def get_multiquotes_with_auth(
-    auth_token: str, feed_token: str | None, broker: str, symbols: list
+    auth_token: str,
+    feed_token: str | None,
+    broker: str,
+    symbols: list,
+    api_key: str | None = None,
 ) -> tuple[bool, dict[str, Any], int]:
     """
     Get real-time quotes for multiple symbols using provided auth tokens.
@@ -318,6 +341,7 @@ def get_multiquotes_with_auth(
         return True, {"status": "success", "results": combined_results}, 200
     except Exception as e:
         if is_broker_auth_error(e):
+            revoke_broker_session_for_api_key(api_key, e)
             logger.warning(f"Multiquote fetch auth error: {e}")
             return broker_auth_error_response()
 
@@ -363,8 +387,16 @@ def get_multiquotes(
             api_key, include_feed_token=True
         )
         if AUTH_TOKEN is None:
+            if verify_api_key(api_key):
+                return broker_auth_error_response()
             return False, {"status": "error", "message": "Invalid openalgo apikey"}, 403
-        return get_multiquotes_with_auth(AUTH_TOKEN, FEED_TOKEN, broker_name, symbols)
+        return get_multiquotes_with_auth(
+            AUTH_TOKEN,
+            FEED_TOKEN,
+            broker_name,
+            symbols,
+            api_key=api_key,
+        )
 
     # Case 2: Direct internal call with auth_token and broker
     elif auth_token and broker:

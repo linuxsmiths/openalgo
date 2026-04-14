@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import httpx
 import pandas as pd
 
+from services.broker_error_utils import is_broker_auth_error
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
 from utils.httpx_client import get_httpx_client
 from utils.logging import get_logger
@@ -182,7 +183,10 @@ class BrokerData:
                 return self._process_quotes_batch(symbols)
 
         except Exception as e:
-            logger.exception("Error fetching multiquotes")
+            if is_broker_auth_error(e):
+                logger.warning(f"Broker auth error fetching multiquotes: {e}")
+            else:
+                logger.exception("Error fetching multiquotes")
             raise Exception(f"Error fetching multiquotes: {e}")
 
     def _process_quotes_batch(self, symbols: list) -> list:
@@ -263,7 +267,10 @@ class BrokerData:
 
         if not response.get("status"):
             error_msg = f"Error from Angel API: {response.get('message', 'Unknown error')}"
-            logger.error(error_msg)
+            if is_broker_auth_error(error_msg):
+                logger.warning(error_msg)
+            else:
+                logger.error(error_msg)
             raise Exception(error_msg)
 
         # Parse response and build results

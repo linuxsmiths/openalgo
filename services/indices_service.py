@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 
 from database.auth_db import get_auth_token_broker
 from database.indices_cache_db import get_cached_indices, save_indices_cache
-from services.broker_error_utils import is_broker_auth_error
+from services.broker_error_utils import is_broker_auth_error, revoke_broker_session_for_api_key
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -102,6 +102,7 @@ def get_indices(api_key: str) -> Dict[str, Any]:
             quotes_response = broker_data.get_multiquotes(symbol_list)
         except Exception as e:
             if is_broker_auth_error(e):
+                revoke_broker_session_for_api_key(api_key, e)
                 logger.warning(f"Broker session expired while fetching indices: {e}")
                 return {
                     'indices': [],

@@ -656,6 +656,52 @@ def invalidate_user_cache(user_id):
     logger.info(f"Cleared all caches for user_id: {user_id}")
 
 
+def revoke_auth_session(user_id, reason=None):
+    """
+    Mark an existing broker auth session as revoked without clearing broker metadata.
+
+    Args:
+        user_id: Username stored in ApiKeys.user_id / Auth.name
+        reason: Optional log context for why the session was revoked
+
+    Returns:
+        bool: True if the session is now revoked (or already was), False on failure
+    """
+    try:
+        auth_obj = Auth.query.filter_by(name=user_id).first()
+        if not auth_obj:
+            logger.warning(f"No auth session found to revoke for user '{user_id}'.")
+            return False
+
+        if not auth_obj.is_revoked:
+            auth_obj.is_revoked = True
+            db_session.commit()
+            logger.warning(
+                f"Broker session revoked for user '{user_id}'."
+                + (f" Reason: {reason}" if reason else "")
+            )
+        else:
+            logger.info(f"Broker session already revoked for user '{user_id}'.")
+
+        invalidate_user_cache(user_id)
+
+        try:
+            from database.cache_invalidation import publish_all_cache_invalidation
+
+            publish_all_cache_invalidation(user_id)
+            logger.debug(f"Published cache invalidation after revocation for user: {user_id}")
+        except Exception as e:
+            logger.warning(
+                f"Failed to publish cache invalidation after revoking session for user {user_id}: {e}"
+            )
+
+        return True
+    except Exception as e:
+        db_session.rollback()
+        logger.exception(f"Error revoking broker session for user '{user_id}': {e}")
+        return False
+
+
 def upsert_api_key(user_id, api_key):
     """Store both hashed and encrypted API key"""
     # Hash with Argon2 for verification

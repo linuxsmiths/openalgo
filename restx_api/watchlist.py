@@ -9,7 +9,7 @@ from flask_restx import Namespace, Resource, fields
 from database.auth_db import verify_api_key, get_auth_token_broker
 from database import watchlist_db
 from services import symbol_search_service
-from services.broker_error_utils import is_broker_auth_error
+from services.broker_error_utils import is_broker_auth_error, revoke_broker_session_for_api_key
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -201,8 +201,9 @@ class GetWatchlist(Resource):
             if not broker_name or not auth_token:
                 return ({
                     'status': 'error',
-                    'message': 'Broker not available'
-                }), 503
+                    'message': 'Broker session expired. Please re-authenticate.',
+                    'auth_error': True,
+                }), 401
             
             # Import broker module
             broker_module = import_broker_module(broker_name)
@@ -233,6 +234,7 @@ class GetWatchlist(Resource):
                 error_msg = str(e)
                 # Check if it's an authentication error
                 if is_broker_auth_error(error_msg):
+                    revoke_broker_session_for_api_key(apikey, error_msg)
                     return ({
                         'status': 'error',
                         'message': 'Broker session expired. Please re-authenticate.',

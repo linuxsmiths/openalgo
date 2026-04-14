@@ -156,6 +156,76 @@ def test_auth_token_broker_caches_negative_result():
     print("PASS: get_auth_token_broker() caches negative result for revoked users")
 
 
+def test_revoke_auth_session_marks_active_session_revoked():
+    """revoke_auth_session() should revoke the existing session without deleting broker metadata."""
+    auth_mod = setup_test_db()
+
+    active_auth = auth_mod.Auth(
+        name="active_user",
+        auth=auth_mod.encrypt_token("live_token"),
+        feed_token=None,
+        broker="angel",
+        is_revoked=0,
+    )
+    auth_mod.db_session.add(active_auth)
+    auth_mod.db_session.commit()
+
+    api_key = "active_user_key_444"
+    auth_mod.upsert_api_key("active_user", api_key)
+
+    # Prime caches with a valid token lookup
+    result = auth_mod.get_auth_token_broker(api_key)
+    assert result == ("live_token", "angel"), f"Expected active token lookup, got {result}"
+    assert len(auth_mod.auth_cache) > 0, "Expected auth cache to be populated before revocation"
+
+    revoked = auth_mod.revoke_auth_session("active_user", reason="Error from Angel API: Invalid Token")
+    assert revoked is True, "Expected revoke_auth_session() to succeed"
+
+    refreshed = auth_mod.Auth.query.filter_by(name="active_user").first()
+    assert refreshed is not None, "Expected auth row to still exist after revocation"
+    assert refreshed.is_revoked == 1, "Expected auth row to be marked revoked"
+    assert refreshed.broker == "angel", "Expected broker metadata to be preserved"
+    assert len(auth_mod.auth_cache) == 0, "Expected auth cache to be cleared after revocation"
+
+    result_after_revoke = auth_mod.get_auth_token_broker(api_key)
+    assert result_after_revoke == (None, None), (
+        f"Expected revoked session to return (None, None), got {result_after_revoke}"
+    )
+
+    print("PASS: revoke_auth_session() revokes active session and preserves broker metadata")
+
+
+def test_multiquotes_returns_auth_error_for_revoked_session():
+    """quotes_service should short-circuit to auth_error when the API key is valid but the broker session is revoked."""
+    auth_mod = setup_test_db()
+
+    revoked_auth = auth_mod.Auth(
+        name="revoked_quotes_user",
+        auth=auth_mod.encrypt_token("stale_token"),
+        feed_token=None,
+        broker="angel",
+        is_revoked=1,
+    )
+    auth_mod.db_session.add(revoked_auth)
+    auth_mod.db_session.commit()
+
+    api_key = "revoked_quotes_key_555"
+    auth_mod.upsert_api_key("revoked_quotes_user", api_key)
+
+    import services.quotes_service as quotes_mod
+
+    success, response, status_code = quotes_mod.get_multiquotes(
+        [{"symbol": "SBIN", "exchange": "NSE"}],
+        api_key=api_key,
+    )
+
+    assert success is False, "Expected revoked multiquotes request to fail"
+    assert status_code == 401, f"Expected 401 for revoked session, got {status_code}"
+    assert response.get("auth_error") is True, "Expected auth_error flag for revoked session"
+
+    print("PASS: get_multiquotes() returns 401 auth_error for revoked sessions")
+
+
 def test_only_admin_revoked_reproduces_original_bug():
     """Reproduce the exact production scenario from 2026-03-25.
 
@@ -210,6 +280,10 @@ if __name__ == "__main__":
     test_get_first_available_api_key_skips_no_broker()
     print()
     test_auth_token_broker_caches_negative_result()
+    print()
+    test_revoke_auth_session_marks_active_session_revoked()
+    print()
+    test_multiquotes_returns_auth_error_for_revoked_session()
     print()
     test_only_admin_revoked_reproduces_original_bug()
 
