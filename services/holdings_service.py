@@ -3,6 +3,7 @@ import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from database.auth_db import get_auth_token_broker
+from services.broker_error_utils import is_broker_auth_error
 from utils.logging import get_logger
 
 # Initialize logger
@@ -132,7 +133,7 @@ def get_holdings_with_auth(
             logger.error(f"[HOLDINGS] API returned error: {error_msg} (code: {error_code})")
 
             # Check if it's an auth error (token expired)
-            if "token" in error_msg.lower() or "unauthorized" in error_msg.lower() or error_code in ["AG8001"]:
+            if is_broker_auth_error(error_msg) or error_code in ["AG8001"]:
                 logger.warning(f"[HOLDINGS] Token authentication error detected. User needs to re-authenticate.")
                 # AG8001 is Angel's "Invalid Token" error code
                 return (
@@ -185,6 +186,17 @@ def get_holdings_with_auth(
         logger.error(f"[HOLDINGS] Traceback: {traceback.format_exc()}")
         return False, {"status": "error", "message": f"Data structure error: {str(e)}"}, 500
     except Exception as e:
+        if is_broker_auth_error(e):
+            logger.warning(f"[HOLDINGS] Auth error processing holdings data: {e}")
+            return (
+                False,
+                {
+                    "status": "error",
+                    "message": "Broker session expired. Please re-authenticate.",
+                    "auth_error": True,
+                },
+                401,
+            )
         logger.error(f"[HOLDINGS] Unexpected error processing holdings data: {e}")
         logger.error(f"[HOLDINGS] Traceback: {traceback.format_exc()}")
         return False, {"status": "error", "message": str(e)}, 500

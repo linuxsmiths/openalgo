@@ -10,6 +10,7 @@ from marshmallow import Schema, fields as ma_fields, ValidationError
 
 from limiter import limiter
 from services.indices_service import get_indices
+from services.broker_error_utils import is_broker_auth_error
 from utils.logging import get_logger
 
 API_RATE_LIMIT = os.getenv("API_RATE_LIMIT", "10 per minute")
@@ -117,10 +118,15 @@ class Indices(Resource):
             # Fetch indices data
             try:
                 result = get_indices(apikey)
+                if result.get('auth_error'):
+                    return {
+                        'status': 'error',
+                        'message': result.get('message', 'Broker session expired. Please re-authenticate.'),
+                        'auth_error': True,
+                    }, 401
             except Exception as e:
                 error_msg = str(e)
-                # Check if it's an authentication error
-                if 'Authentication failed' in error_msg or 'auth token' in error_msg.lower():
+                if is_broker_auth_error(error_msg):
                     logger.warning(f"Auth error in indices: {error_msg}")
                     return {
                         'status': 'error',

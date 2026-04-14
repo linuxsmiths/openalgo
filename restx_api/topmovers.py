@@ -10,6 +10,7 @@ from marshmallow import Schema, fields as ma_fields, ValidationError
 
 from limiter import limiter
 from services.topmovers_service import get_top_movers
+from services.broker_error_utils import is_broker_auth_error
 from utils.logging import get_logger
 
 API_RATE_LIMIT = os.getenv("API_RATE_LIMIT", "10 per minute")
@@ -141,6 +142,12 @@ class TopMovers(Resource):
 
             # Fetch top movers (pass API key, not username)
             result = get_top_movers(apikey, index=index, limit=limit)
+            if result.get('auth_error'):
+                return {
+                    'status': 'error',
+                    'message': result.get('message', 'Broker session expired. Please re-authenticate.'),
+                    'auth_error': True,
+                }, 401
 
             return {
                 'status': 'success',
@@ -155,6 +162,12 @@ class TopMovers(Resource):
 
         except Exception as e:
             logger.exception(f"Error in TopMovers endpoint: {e}")
+            if is_broker_auth_error(e):
+                return {
+                    'status': 'error',
+                    'message': 'Broker session expired. Please re-authenticate.',
+                    'auth_error': True,
+                }, 401
             return {
                 'status': 'error',
                 'message': f"Error fetching top movers: {str(e)}",

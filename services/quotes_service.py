@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from database.auth_db import get_auth_token_broker
 from database.token_db import get_token
+from services.broker_error_utils import broker_auth_error_response, is_broker_auth_error
 from utils.constants import VALID_EXCHANGES
 from utils.logging import get_logger
 
@@ -143,6 +144,10 @@ def get_quotes_with_auth(
 
         return True, {"status": "success", "data": quotes}, 200
     except Exception as e:
+        if is_broker_auth_error(e):
+            logger.warning(f"Quote fetch auth error: {e}")
+            return broker_auth_error_response()
+
         # Check if this is a permission error
         error_msg = str(e)
         if "permission" in error_msg.lower() or "insufficient" in error_msg.lower():
@@ -314,6 +319,10 @@ def get_multiquotes_with_auth(
 
         return True, {"status": "success", "results": combined_results}, 200
     except Exception as e:
+        if is_broker_auth_error(e):
+            logger.warning(f"Multiquote fetch auth error: {e}")
+            return broker_auth_error_response()
+
         # Check if this is a permission error
         error_msg = str(e)
         if "permission" in error_msg.lower() or "insufficient" in error_msg.lower():

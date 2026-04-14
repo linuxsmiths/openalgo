@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 
 from database.auth_db import get_auth_token_broker
 from database.topmovers_cache_db import get_cached_movers, save_movers_cache, clear_stale_cache
+from services.broker_error_utils import is_broker_auth_error
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -203,9 +204,15 @@ def get_top_movers(api_key: str, index: str = 'NIFTY50', limit: int = 10) -> Dic
         auth_token, broker_name = get_auth_token_broker(api_key)
         
         if not broker_name or not auth_token:
-            # If no valid auth token, return empty (user not authenticated with broker yet)
+            # If no valid auth token, return an auth-aware response so callers can redirect
             logger.warning(f"No valid auth token for API key")
-            return {'gainers': [], 'losers': [], 'cached': False}
+            return {
+                'gainers': [],
+                'losers': [],
+                'cached': False,
+                'auth_error': True,
+                'message': 'Broker session expired. Please re-authenticate.',
+            }
 
         logger.debug(f"Using broker: {broker_name}")
 
@@ -238,6 +245,16 @@ def get_top_movers(api_key: str, index: str = 'NIFTY50', limit: int = 10) -> Dic
             symbol_list = [{'symbol': sym['symbol'], 'exchange': sym['exchange']} for sym in symbols]
             quotes_response = broker_data.get_multiquotes(symbol_list)
         except Exception as e:
+            if is_broker_auth_error(e):
+                logger.warning(f"Broker session expired while fetching top movers for {index}: {e}")
+                return {
+                    'gainers': [],
+                    'losers': [],
+                    'cached': False,
+                    'auth_error': True,
+                    'message': 'Broker session expired. Please re-authenticate.',
+                }
+
             logger.exception(f"Error fetching multiquotes: {e}")
             # Try with fallback symbols if we have auth token issues
             if not auth_token and "auth" not in str(e).lower():

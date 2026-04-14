@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 
 from database.auth_db import get_auth_token_broker
 from database.indices_cache_db import get_cached_indices, save_indices_cache
+from services.broker_error_utils import is_broker_auth_error
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -53,7 +54,12 @@ def get_indices(api_key: str) -> Dict[str, Any]:
         
         if not broker_name or not auth_token:
             logger.warning("No valid auth token for API key")
-            return {'indices': [], 'cached': False}
+            return {
+                'indices': [],
+                'cached': False,
+                'auth_error': True,
+                'message': 'Broker session expired. Please re-authenticate.',
+            }
 
         logger.debug(f"Using broker: {broker_name}")
 
@@ -95,6 +101,15 @@ def get_indices(api_key: str) -> Dict[str, Any]:
             symbol_list = [{'symbol': sym, 'exchange': exchange} for _, sym, exchange in all_indices]
             quotes_response = broker_data.get_multiquotes(symbol_list)
         except Exception as e:
+            if is_broker_auth_error(e):
+                logger.warning(f"Broker session expired while fetching indices: {e}")
+                return {
+                    'indices': [],
+                    'cached': False,
+                    'auth_error': True,
+                    'message': 'Broker session expired. Please re-authenticate.',
+                }
+
             logger.exception(f"Error fetching index quotes: {e}")
             return {'indices': [], 'cached': False}
 
