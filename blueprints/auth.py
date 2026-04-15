@@ -28,6 +28,7 @@ from extensions import socketio
 from limiter import limiter  # Import the limiter instance
 from utils.email_debug import debug_smtp_connection
 from utils.email_utils import send_password_reset_email, send_test_email
+from utils.broker_totp import is_broker_totp_configured
 from utils.ip_helper import get_real_ip
 from utils.logging import get_logger
 from utils.session import check_session_validity
@@ -61,8 +62,10 @@ def get_broker_config():
 
     broker_name is always returned (needed to display the broker login button).
     broker_api_key and redirect_url are only returned when authenticated.
+    broker_totp_configured only indicates whether BROKER_TOTP_KEY is usable.
     """
     REDIRECT_URL = os.getenv("REDIRECT_URL")
+    broker_totp_configured = is_broker_totp_configured()
 
     # Extract broker name from redirect URL
     match = re.search(r"/([^/]+)/callback$", REDIRECT_URL)
@@ -80,6 +83,7 @@ def get_broker_config():
                 "broker_name": broker_name,
                 "broker_api_key": BROKER_API_KEY,
                 "redirect_url": REDIRECT_URL,
+                "broker_totp_configured": broker_totp_configured,
             }
         )
 
@@ -90,6 +94,7 @@ def get_broker_config():
             "broker_name": broker_name,
             "broker_api_key": None,
             "redirect_url": REDIRECT_URL,
+            "broker_totp_configured": broker_totp_configured,
         }
     )
 

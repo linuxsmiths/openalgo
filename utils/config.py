@@ -28,6 +28,16 @@ def get_broker_api_secret() -> str | None:
     return os.getenv("BROKER_API_SECRET")
 
 
+def get_broker_totp_key() -> str | None:
+    """
+    Retrieve the configured broker TOTP seed.
+
+    Returns:
+        str | None: The broker TOTP seed from environment variables, or None if not set.
+    """
+    return os.getenv("BROKER_TOTP_KEY")
+
+
 def get_login_rate_limit_min() -> str:
     """
     Retrieve the rate limit for logins per minute.

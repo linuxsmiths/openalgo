@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowLeft, ExternalLink, Loader2, Shield } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { showToast } from '@/utils/toast'
 import { fetchCSRFToken } from '@/api/client'
@@ -29,6 +29,10 @@ interface BrokerConfig {
   callbackUrl?: string
   warning?: string
   hiddenFields?: Record<string, string>
+}
+
+function isAutoTotpField(field: FieldConfig, config: BrokerConfig): boolean {
+  return field.name === 'totp' || (field.name === 'twofa' && config.hiddenFields?.twofatype === 'totp')
 }
 
 // Broker-specific field configurations
@@ -310,9 +314,58 @@ export default function BrokerTOTP() {
     normalizedBroker && brokerFields[normalizedBroker]
       ? brokerFields[normalizedBroker]
       : brokerFields.default
+  const supportsAutoTotp = config.fields.some((field) => isAutoTotpField(field, config))
+  const [brokerTotpConfigured, setBrokerTotpConfigured] = useState(false)
+  const [isBrokerConfigLoading, setIsBrokerConfigLoading] = useState(supportsAutoTotp)
   const brokerName = broker
     ? brokerNames[broker] || brokerNames[normalizedBroker || ''] || broker
     : 'Broker'
+  const visibleFields = brokerTotpConfigured
+    ? config.fields.filter((field) => !isAutoTotpField(field, config))
+    : config.fields
+
+  useEffect(() => {
+    if (!supportsAutoTotp) {
+      setBrokerTotpConfigured(false)
+      setIsBrokerConfigLoading(false)
+      return
+    }
+
+    let isCancelled = false
+
+    const fetchBrokerConfig = async () => {
+      setIsBrokerConfigLoading(true)
+
+      try {
+        const response = await fetch('/auth/broker-config', {
+          credentials: 'include',
+        })
+        const data = await response.json()
+
+        if (!isCancelled) {
+          setBrokerTotpConfigured(
+            data.status === 'success' &&
+              data.broker_name === normalizedBroker &&
+              Boolean(data.broker_totp_configured)
+          )
+        }
+      } catch {
+        if (!isCancelled) {
+          setBrokerTotpConfigured(false)
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsBrokerConfigLoading(false)
+        }
+      }
+    }
+
+    fetchBrokerConfig()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [normalizedBroker, supportsAutoTotp])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -327,7 +380,7 @@ export default function BrokerTOTP() {
     }
 
     // Validate required fields (skip optional fields)
-    const requiredFields = config.fields.filter((f) => !f.optional).map((f) => f.name)
+    const requiredFields = visibleFields.filter((f) => !f.optional).map((f) => f.name)
     const missingFields = requiredFields.filter((f) => !formData[f]?.trim())
     if (missingFields.length > 0) {
       setError('Please fill in all required fields.')
@@ -433,45 +486,61 @@ export default function BrokerTOTP() {
               </Alert>
             )}
 
+            {brokerTotpConfigured && supportsAutoTotp && (
+              <Alert className="mb-4">
+                <Shield className="h-4 w-4" />
+                <AlertDescription>
+                  TOTP is configured on the server and will be generated automatically for this broker login.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
-              {config.fields.map((field) => (
-                <div key={field.name} className="space-y-2">
-                  <Label htmlFor={field.name}>
-                    {field.label}
-                    {field.optional && (
-                      <span className="text-muted-foreground ml-1">(optional)</span>
-                    )}
-                  </Label>
-                  <div className="relative">
-                    {field.prefix && (
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                        {field.prefix}
-                      </span>
-                    )}
-                    <Input
-                      id={field.name}
-                      type={field.type}
-                      inputMode={field.inputMode}
-                      placeholder={field.placeholder}
-                      value={formData[field.name] || ''}
-                      onChange={(e) => handleInputChange(field.name, e.target.value, field)}
-                      required={!field.optional}
-                      disabled={isLoading}
-                      maxLength={field.maxLength}
-                      pattern={field.pattern}
-                      autoComplete={
-                        field.type === 'password'
-                          ? 'current-password'
-                          : field.inputMode === 'numeric'
-                            ? 'one-time-code'
-                            : 'off'
-                      }
-                      className={field.prefix ? 'pl-12' : ''}
-                    />
-                  </div>
-                  {field.hint && <p className="text-xs text-muted-foreground">{field.hint}</p>}
+              {isBrokerConfigLoading ? (
+                <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Checking broker login configuration...
                 </div>
-              ))}
+              ) : (
+                visibleFields.map((field) => (
+                  <div key={field.name} className="space-y-2">
+                    <Label htmlFor={field.name}>
+                      {field.label}
+                      {field.optional && (
+                        <span className="text-muted-foreground ml-1">(optional)</span>
+                      )}
+                    </Label>
+                    <div className="relative">
+                      {field.prefix && (
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                          {field.prefix}
+                        </span>
+                      )}
+                      <Input
+                        id={field.name}
+                        type={field.type}
+                        inputMode={field.inputMode}
+                        placeholder={field.placeholder}
+                        value={formData[field.name] || ''}
+                        onChange={(e) => handleInputChange(field.name, e.target.value, field)}
+                        required={!field.optional}
+                        disabled={isLoading}
+                        maxLength={field.maxLength}
+                        pattern={field.pattern}
+                        autoComplete={
+                          field.type === 'password'
+                            ? 'current-password'
+                            : field.inputMode === 'numeric'
+                              ? 'one-time-code'
+                              : 'off'
+                        }
+                        className={field.prefix ? 'pl-12' : ''}
+                      />
+                    </div>
+                    {field.hint && <p className="text-xs text-muted-foreground">{field.hint}</p>}
+                  </div>
+                ))
+              )}
 
               {error && (
                 <Alert variant="destructive">
@@ -479,7 +548,7 @@ export default function BrokerTOTP() {
                 </Alert>
               )}
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading || isBrokerConfigLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

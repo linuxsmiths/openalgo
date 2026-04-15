@@ -10,6 +10,7 @@ from flask import current_app as app
 
 from limiter import limiter  # Import the limiter instance
 from utils.auth_utils import handle_auth_failure, handle_auth_success
+from utils.broker_totp import resolve_broker_totp_code
 from utils.config import (
     get_broker_api_key,
     get_broker_api_secret,
@@ -26,6 +27,25 @@ LOGIN_RATE_LIMIT_MIN = get_login_rate_limit_min()
 LOGIN_RATE_LIMIT_HOUR = get_login_rate_limit_hour()
 
 brlogin_bp = Blueprint("brlogin", __name__, url_prefix="/")
+
+
+def get_broker_totp_from_request(
+    broker: str,
+    form_field: str = "totp",
+    *,
+    required: bool = True,
+    field_label: str = "TOTP code",
+) -> tuple[str | None, str | None]:
+    totp_code, error_message, used_env_totp = resolve_broker_totp_code(
+        request.form.get(form_field),
+        required=required,
+        field_label=field_label,
+    )
+
+    if used_env_totp:
+        logger.info(f"Using BROKER_TOTP_KEY to generate {field_label} for broker {broker}")
+
+    return totp_code, error_message
 
 
 @brlogin_bp.errorhandler(429)
@@ -78,7 +98,10 @@ def broker_callback(broker, para=None):
         elif request.method == "POST":
             clientcode = request.form.get("userid") or request.form.get("clientid")
             broker_pin = request.form.get("pin")
-            totp_code = request.form.get("totp")
+            totp_code, error_message = get_broker_totp_from_request(broker)
+
+            if error_message:
+                return jsonify({"status": "error", "message": error_message}), 400
 
             auth_token, error_message = auth_function(clientcode, broker_pin, totp_code)
             forward_url = "broker.html"
@@ -91,7 +114,11 @@ def broker_callback(broker, para=None):
         elif request.method == "POST":
             clientcode = request.form.get("userid") or request.form.get("clientid")
             broker_pin = request.form.get("pin")
-            totp_code = request.form.get("totp")
+            totp_code, error_message = get_broker_totp_from_request(broker)
+
+            if error_message:
+                return jsonify({"status": "error", "message": error_message}), 400
+
             # to store user_id in the DB
             user_id = clientcode
             auth_token, feed_token, error_message = auth_function(clientcode, broker_pin, totp_code)
@@ -115,12 +142,12 @@ def broker_callback(broker, para=None):
 
             # Get password and TOTP from form
             password = request.form.get("password")
-            totp_code = request.form.get("totp")
+            totp_code, error_message = get_broker_totp_from_request(broker)
 
             if not password:
                 return jsonify({"status": "error", "message": "Password is required."}), 400
-            if not totp_code:
-                return jsonify({"status": "error", "message": "TOTP code is required."}), 400
+            if error_message:
+                return jsonify({"status": "error", "message": error_message}), 400
 
             # Single-step authentication with password + TOTP
             auth_token, feed_token, error_message = authenticate_with_totp(password, totp_code)
@@ -254,8 +281,15 @@ def broker_callback(broker, para=None):
 
         elif request.method == "POST":
             password = request.form.get("password")
-            twofa = request.form.get("twofa")
+            twofa, error_message = get_broker_totp_from_request(
+                broker,
+                "twofa",
+                field_label="2FA code / TOTP",
+            )
             twofatype = request.form.get("twofatype")
+
+            if error_message:
+                return jsonify({"status": "error", "message": error_message}), 400
 
             # Get auth token using individual token service
             auth_token, error_message = auth_function(
@@ -559,7 +593,10 @@ def broker_callback(broker, para=None):
         elif request.method == "POST":
             userid = request.form.get("userid")
             password = request.form.get("password")
-            totp_code = request.form.get("totp")
+            totp_code, error_message = get_broker_totp_from_request(broker)
+
+            if error_message:
+                return jsonify({"status": "error", "message": error_message}), 400
 
             auth_token, error_message = auth_function(userid, password, totp_code)
             forward_url = "broker.html"
@@ -570,10 +607,10 @@ def broker_callback(broker, para=None):
             return redirect("/broker/nubra/totp")
 
         elif request.method == "POST":
-            totp_code = request.form.get("totp")
+            totp_code, error_message = get_broker_totp_from_request(broker)
 
-            if not totp_code:
-                return jsonify({"status": "error", "message": "TOTP code is required."}), 400
+            if error_message:
+                return jsonify({"status": "error", "message": error_message}), 400
 
             auth_token, feed_token, error_message = auth_function(totp_code)
             forward_url = "broker.html"
@@ -596,8 +633,14 @@ def broker_callback(broker, para=None):
         elif request.method == "POST":
             userid = request.form.get("userid")
             password = request.form.get("password")
-            totp_code = request.form.get("totp")
+            totp_code, error_message = get_broker_totp_from_request(
+                broker,
+                required=False,
+            )
             date_of_birth = request.form.get("dob")
+
+            if error_message:
+                return jsonify({"status": "error", "message": error_message}), 400
 
             auth_token, feed_token, error_message = auth_function(
                 userid, password, totp_code, date_of_birth
@@ -620,12 +663,18 @@ def broker_callback(broker, para=None):
         elif request.method == "POST":
             # New TOTP authentication flow
             mobile_number = request.form.get("mobile") or request.form.get("mobilenumber")
-            totp = request.form.get("totp")
+            totp, error_message = get_broker_totp_from_request(
+                broker,
+                field_label="TOTP",
+            )
             mpin = request.form.get("mpin")
 
             # Validate inputs
-            if not mobile_number or not totp or not mpin:
-                error_message = "Please provide Mobile Number, TOTP, and MPIN"
+            if not mobile_number or not mpin:
+                return jsonify(
+                    {"status": "error", "message": "Please provide Mobile Number and MPIN"}
+                ), 400
+            if error_message:
                 return jsonify({"status": "error", "message": error_message}), 400
 
             logger.info(f"Kotak TOTP authentication initiated for mobile: {mobile_number[:5]}***")

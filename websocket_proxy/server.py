@@ -603,7 +603,7 @@ class WebSocketProxy:
                 "api_secret_market": os.getenv("BROKER_API_SECRET_MARKET"),
                 "broker_user_id": os.getenv("BROKER_USER_ID"),
                 "password": os.getenv("BROKER_PASSWORD"),
-                "totp_secret": os.getenv("BROKER_TOTP_SECRET"),
+                "totp_key": os.getenv("BROKER_TOTP_KEY"),
             }
 
             # Validate broker is supported
