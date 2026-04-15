@@ -34,6 +34,7 @@ interface WatchlistSymbol {
 export const Watchlist: React.FC = () => {
   const apiKey = useAuthStore((state: any) => state.apiKey)
   const queryClient = useQueryClient()
+  const [isManualRefreshPending, setIsManualRefreshPending] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [sortField, setSortField] = useState<'symbol' | 'ltp' | 'change_percent'>('symbol')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
@@ -131,6 +132,17 @@ export const Watchlist: React.FC = () => {
     }
   }
 
+  const handleManualRefresh = async () => {
+    if (isManualRefreshPending) return
+
+    setIsManualRefreshPending(true)
+    try {
+      await refetch()
+    } finally {
+      setIsManualRefreshPending(false)
+    }
+  }
+
   const SortHeader = ({
     field,
     label,
@@ -171,8 +183,13 @@ export const Watchlist: React.FC = () => {
             <Plus size={18} />
             Add Symbol
           </button>
-          <button className="refresh-btn" onClick={() => refetch()} disabled={isLoading} title="Refresh">
-            <RefreshCw size={18} className={isLoading ? 'spinning' : ''} />
+          <button
+            className="refresh-btn"
+            onClick={() => void handleManualRefresh()}
+            disabled={isLoading || isManualRefreshPending}
+            title="Refresh"
+          >
+            <RefreshCw size={18} className={isLoading || isManualRefreshPending ? 'spinning' : ''} />
           </button>
         </div>
       </div>
