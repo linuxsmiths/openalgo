@@ -1,9 +1,10 @@
 import { ArrowUp, ArrowDown, TrendingUp } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 import { tradingApi } from '@/api/trading'
+import { InstrumentLink } from '@/components/trading'
 import { useAuthStore } from '@/stores/authStore'
 
 interface Mover {
@@ -22,34 +23,50 @@ export function TopMoversCard() {
   const [losers, setLosers] = useState<Mover[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const hasLoadedOnceRef = useRef(false)
 
   // biome-ignore lint: this is intentional
   useEffect(() => {
     if (apiKey) {
-      fetchTopMovers()
+      void fetchTopMovers()
       // Auto-refresh every 5 seconds
-      const interval = setInterval(fetchTopMovers, 5000)
+      const interval = setInterval(() => {
+        void fetchTopMovers(true)
+      }, 5000)
       return () => clearInterval(interval)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey])
 
-  const fetchTopMovers = async () => {
+  const fetchTopMovers = async (backgroundRefresh = false) => {
     if (!apiKey) return
-    setLoading(true)
-    setError(null)
+
+    const shouldShowLoader = !hasLoadedOnceRef.current && !backgroundRefresh
+    if (shouldShowLoader) {
+      setLoading(true)
+      setError(null)
+    }
+
     try {
       const response = await tradingApi.getTopMovers(apiKey, 'NIFTY50', 5)
       if (response.status === 'success') {
         setGainers(response.data.gainers || [])
         setLosers(response.data.losers || [])
+        hasLoadedOnceRef.current = true
+        setError(null)
       } else {
-        setError(response.message || 'Failed to fetch top movers')
+        if (!hasLoadedOnceRef.current) {
+          setError(response.message || 'Failed to fetch top movers')
+        }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch top movers')
+      if (!hasLoadedOnceRef.current) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch top movers')
+      }
     } finally {
-      setLoading(false)
+      if (shouldShowLoader) {
+        setLoading(false)
+      }
     }
   }
 
@@ -93,7 +110,13 @@ export function TopMoversCard() {
                     className="flex items-center justify-between rounded-md bg-green-50 p-2"
                   >
                     <div>
-                      <p className="text-sm font-medium">{mover.symbol}</p>
+                      <div className="text-sm font-medium">
+                        <InstrumentLink
+                          symbol={mover.symbol}
+                          exchange={mover.exchange}
+                          className="font-medium"
+                        />
+                      </div>
                       <p className="text-xs text-gray-500">
                         ₹{mover.ltp.toFixed(2)}
                       </p>
@@ -123,7 +146,13 @@ export function TopMoversCard() {
                     className="flex items-center justify-between rounded-md bg-red-50 p-2"
                   >
                     <div>
-                      <p className="text-sm font-medium">{mover.symbol}</p>
+                      <div className="text-sm font-medium">
+                        <InstrumentLink
+                          symbol={mover.symbol}
+                          exchange={mover.exchange}
+                          className="font-medium"
+                        />
+                      </div>
                       <p className="text-xs text-gray-500">
                         ₹{mover.ltp.toFixed(2)}
                       </p>

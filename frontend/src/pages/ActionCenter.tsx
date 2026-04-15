@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible'
+import { InstrumentLink } from '@/components/trading'
 import {
   Table,
   TableBody,
@@ -521,7 +522,13 @@ export default function ActionCenterPage() {
                           <Badge variant="outline">{order.strategy}</Badge>
                           <div className="text-xs text-muted-foreground mt-1">{order.api_type}</div>
                         </TableCell>
-                        <TableCell className="font-medium">{order.symbol}</TableCell>
+                        <TableCell className="font-medium">
+                          <InstrumentLink
+                            symbol={order.symbol}
+                            exchange={order.exchange}
+                            className="font-medium"
+                          />
+                        </TableCell>
                         <TableCell>
                           <Badge variant={getExchangeBadgeVariant(order.exchange)}>
                             {order.exchange}

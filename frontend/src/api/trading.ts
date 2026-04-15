@@ -21,6 +21,10 @@ export interface QuotesData {
   open: number
   prev_close: number
   volume: number
+  week_52_high?: number
+  week_52_low?: number
+  week52High?: number
+  week52Low?: number
 }
 
 export interface DepthLevel {
@@ -54,6 +58,22 @@ export interface MultiQuotesResult {
   data: QuotesData
 }
 
+export interface SymbolInfoData {
+  id: number
+  symbol: string
+  brsymbol: string
+  name: string
+  exchange: string
+  brexchange: string
+  token: string
+  expiry?: string | null
+  strike?: number | null
+  lotsize?: number | null
+  instrumenttype?: string | null
+  tick_size?: number | null
+  freeze_qty?: number | null
+}
+
 // MultiQuotes API has a different response structure (results at root, not in data)
 export interface MultiQuotesApiResponse {
   status: 'success' | 'error'
@@ -71,6 +91,22 @@ export const tradingApi = {
     exchange: string
   ): Promise<ApiResponse<QuotesData>> => {
     const response = await apiClient.post<ApiResponse<QuotesData>>('/quotes', {
+      apikey: apiKey,
+      symbol,
+      exchange,
+    })
+    return response.data
+  },
+
+  /**
+   * Get instrument metadata for a symbol.
+   */
+  getSymbolInfo: async (
+    apiKey: string,
+    symbol: string,
+    exchange: string
+  ): Promise<ApiResponse<SymbolInfoData>> => {
+    const response = await apiClient.post<ApiResponse<SymbolInfoData>>('/symbol', {
       apikey: apiKey,
       symbol,
       exchange,

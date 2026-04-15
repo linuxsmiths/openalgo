@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { tradingApi } from '@/api/trading'
+import { InstrumentLink } from '@/components/trading'
 import { useAuthStore } from '@/stores/authStore'
 
 interface Mover {
@@ -252,7 +253,11 @@ export function TopMovers() {
                       {sortMoversWithOrder(gainers, sortKey, gainersSortOrder).map((mover) => (
                         <tr key={mover.symbol} className="border-b hover:bg-green-50">
                           <td className="px-2 py-2 font-medium">
-                            {mover.symbol}
+                            <InstrumentLink
+                              symbol={mover.symbol}
+                              exchange={mover.exchange}
+                              className="font-medium"
+                            />
                           </td>
                           <td className="px-2 py-2 text-right">
                             ₹{mover.ltp.toFixed(2)}
@@ -346,7 +351,11 @@ export function TopMovers() {
                       {sortMoversWithOrder(losers, sortKey, losersSortOrder).map((mover) => (
                         <tr key={mover.symbol} className="border-b hover:bg-red-50">
                           <td className="px-2 py-2 font-medium">
-                            {mover.symbol}
+                            <InstrumentLink
+                              symbol={mover.symbol}
+                              exchange={mover.exchange}
+                              className="font-medium"
+                            />
                           </td>
                           <td className="px-2 py-2 text-right">
                             ₹{mover.ltp.toFixed(2)}

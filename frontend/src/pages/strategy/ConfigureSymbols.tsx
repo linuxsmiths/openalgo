@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { showToast } from '@/utils/toast'
 import { strategyApi } from '@/api/strategy'
+import { InstrumentLink } from '@/components/trading'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -458,7 +459,13 @@ export default function ConfigureSymbols() {
               <TableBody>
                 {mappings.map((mapping) => (
                   <TableRow key={mapping.id}>
-                    <TableCell className="font-medium">{mapping.symbol}</TableCell>
+                    <TableCell className="font-medium">
+                      <InstrumentLink
+                        symbol={mapping.symbol}
+                        exchange={mapping.exchange}
+                        className="font-medium"
+                      />
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{mapping.exchange}</Badge>
                     </TableCell>

@@ -29,7 +29,44 @@ export interface LiveQuoteData {
   askPrice?: number
   bidSize?: number
   askSize?: number
+  week52High?: number
+  week52Low?: number
   depth?: NormalizedDepth
+}
+
+function getPositiveNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed) && parsed > 0) return parsed
+  }
+  return undefined
+}
+
+function firstPositiveNumber(...values: unknown[]): number | undefined {
+  for (const value of values) {
+    const parsed = getPositiveNumber(value)
+    if (parsed !== undefined) return parsed
+  }
+  return undefined
+}
+
+function getWeek52Value(
+  source: Record<string, unknown> | null | undefined,
+  keys: string[]
+): number | undefined {
+  if (!source) return undefined
+
+  for (const key of keys) {
+    const value = source[key]
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Number(value)
+      if (Number.isFinite(parsed)) return parsed
+    }
+  }
+
+  return undefined
 }
 
 /**
@@ -243,6 +280,7 @@ export function useLiveQuote(
   const mergedData: LiveQuoteData = useMemo(() => {
     // Determine best depth source
     const depth = wsData?.depth ?? restDepthNormalized
+    const restQuotesRecord = (restQuotes ?? null) as Record<string, unknown> | null
 
     // Determine best bid/ask from depth or quotes
     const bidPrice = wsData?.depth?.buy?.[0]?.price ??
@@ -259,14 +297,23 @@ export function useLiveQuote(
     const askSize = wsData?.depth?.sell?.[0]?.quantity ??
                     restDepthNormalized?.sell?.[0]?.quantity ??
                     wsData?.ask_size
+    const week52High = wsData?.week52High ??
+      getWeek52Value(restQuotesRecord, ['week52High', 'week_52_high', '52_week_high', '52_week_high_price'])
+    const week52Low = wsData?.week52Low ??
+      getWeek52Value(restQuotesRecord, ['week52Low', 'week_52_low', '52_week_low', '52_week_low_price'])
+    const ltp = firstPositiveNumber(wsData?.ltp, restDepth?.ltp, restQuotes?.ltp)
+    const open = firstPositiveNumber(wsData?.open, restDepth?.open, restQuotes?.open)
+    const high = firstPositiveNumber(wsData?.high, restDepth?.high, restQuotes?.high)
+    const low = firstPositiveNumber(wsData?.low, restDepth?.low, restQuotes?.low)
+    const close = firstPositiveNumber(wsData?.close, restDepth?.prev_close, restQuotes?.prev_close)
 
     // Merge all data with priority: WebSocket > REST depth > REST quotes
     return {
-      ltp: wsData?.ltp ?? restDepth?.ltp ?? restQuotes?.ltp,
-      open: wsData?.open ?? restDepth?.open ?? restQuotes?.open,
-      high: wsData?.high ?? restDepth?.high ?? restQuotes?.high,
-      low: wsData?.low ?? restDepth?.low ?? restQuotes?.low,
-      close: wsData?.close ?? restDepth?.prev_close ?? restQuotes?.prev_close,
+      ltp,
+      open,
+      high,
+      low,
+      close,
       volume: wsData?.volume ?? restDepth?.volume ?? restQuotes?.volume,
       oi: restDepth?.oi ?? restQuotes?.oi,
       change: wsData?.change,
@@ -275,6 +322,8 @@ export function useLiveQuote(
       askPrice,
       bidSize,
       askSize,
+      week52High,
+      week52Low,
       depth,
     }
   }, [wsData, restQuotes, restDepth, restDepthNormalized])

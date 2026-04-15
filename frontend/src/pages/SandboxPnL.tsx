@@ -1,6 +1,7 @@
 import { Activity, Briefcase, Calendar, Download, Package, Settings } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { InstrumentLink } from '@/components/trading'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -354,7 +355,13 @@ export default function SandboxPnL() {
                     <TableBody>
                       {data.positions.map((pos, index) => (
                         <TableRow key={index}>
-                          <TableCell className="font-semibold">{pos.symbol}</TableCell>
+                          <TableCell className="font-semibold">
+                            <InstrumentLink
+                              symbol={pos.symbol}
+                              exchange={pos.exchange}
+                              className="font-semibold"
+                            />
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline">{pos.exchange}</Badge>
                           </TableCell>
@@ -440,7 +447,13 @@ export default function SandboxPnL() {
                     <TableBody>
                       {data.holdings.map((holding, index) => (
                         <TableRow key={index}>
-                          <TableCell className="font-semibold">{holding.symbol}</TableCell>
+                          <TableCell className="font-semibold">
+                            <InstrumentLink
+                              symbol={holding.symbol}
+                              exchange={holding.exchange}
+                              className="font-semibold"
+                            />
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline">{holding.exchange}</Badge>
                           </TableCell>
@@ -511,7 +524,13 @@ export default function SandboxPnL() {
                           <TableCell className="font-mono text-xs">
                             {trade.tradeid.slice(0, 12)}...
                           </TableCell>
-                          <TableCell className="font-semibold">{trade.symbol}</TableCell>
+                          <TableCell className="font-semibold">
+                            <InstrumentLink
+                              symbol={trade.symbol}
+                              exchange={trade.exchange}
+                              className="font-semibold"
+                            />
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline">{trade.exchange}</Badge>
                           </TableCell>

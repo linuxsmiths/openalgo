@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { showToast } from '@/utils/toast'
 import { strategyApi } from '@/api/strategy'
+import { InstrumentLink } from '@/components/trading'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -473,7 +474,13 @@ export default function ViewStrategy() {
               <TableBody>
                 {mappings.map((mapping) => (
                   <TableRow key={mapping.id}>
-                    <TableCell className="font-medium">{mapping.symbol}</TableCell>
+                    <TableCell className="font-medium">
+                      <InstrumentLink
+                        symbol={mapping.symbol}
+                        exchange={mapping.exchange}
+                        className="font-medium"
+                      />
+                    </TableCell>
                     <TableCell>{mapping.exchange}</TableCell>
                     <TableCell className="text-right">{mapping.quantity}</TableCell>
                     <TableCell>

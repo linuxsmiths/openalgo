@@ -299,9 +299,18 @@ class GetWatchlist(Resource):
                         'total_sell_quantity': total_sell_quantity,
                         'total_buy_orders': total_buy_orders,
                         'total_sell_orders': total_sell_orders,
-                        # 52-week high/low (to be calculated separately)
-                        'week_52_high': 0,  # TODO: Calculate from historical data
-                        'week_52_low': 0,   # TODO: Calculate from historical data
+                        'week_52_high': float(
+                            quote_data.get('week_52_high')
+                            or quote_data.get('52_week_high')
+                            or quote_data.get('week52High')
+                            or 0
+                        ),
+                        'week_52_low': float(
+                            quote_data.get('week_52_low')
+                            or quote_data.get('52_week_low')
+                            or quote_data.get('week52Low')
+                            or 0
+                        ),
                     })
             
             return ({

@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useOrderEventRefresh } from '@/hooks/useOrderEventRefresh'
 import { showToast } from '@/utils/toast'
 import { type QuotesData, tradingApi } from '@/api/trading'
+import { InstrumentLink } from '@/components/trading'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -551,7 +552,13 @@ export default function OrderBook() {
 
                     return (
                       <TableRow key={`${order.orderid}-${index}`}>
-                        <TableCell className="font-medium">{order.symbol}</TableCell>
+                        <TableCell className="font-medium">
+                          <InstrumentLink
+                            symbol={order.symbol}
+                            exchange={order.exchange}
+                            className="font-medium"
+                          />
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline">{order.exchange}</Badge>
                         </TableCell>
@@ -778,5 +785,4 @@ export default function OrderBook() {
     </div>
   )
 }
-
 

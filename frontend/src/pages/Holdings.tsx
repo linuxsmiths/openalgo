@@ -13,6 +13,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOrderEventRefresh } from '@/hooks/useOrderEventRefresh'
 import { tradingApi } from '@/api/trading'
+import { InstrumentLink } from '@/components/trading'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -566,7 +567,13 @@ export default function Holdings() {
                 <TableBody>
                   {sortedHoldings.map((holding, index) => (
                     <TableRow key={`${holding.symbol}-${holding.exchange}-${index}`}>
-                      <TableCell className="w-24 font-medium">{holding.symbol}</TableCell>
+                      <TableCell className="w-24 font-medium">
+                        <InstrumentLink
+                          symbol={holding.symbol}
+                          exchange={holding.exchange}
+                          className="font-medium"
+                        />
+                      </TableCell>
                       <TableCell className="w-20 text-right font-mono">{holding.quantity}</TableCell>
                       <TableCell className="w-28 text-right font-mono">
                         {holding.average_price !== undefined

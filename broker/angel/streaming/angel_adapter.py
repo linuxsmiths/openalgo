@@ -643,6 +643,8 @@ class AngelWebSocketAdapter(BaseBrokerWebSocketAdapter):
                 "oi": message.get("open_interest", 0),
                 "upper_circuit": message.get("upper_circuit_limit", 0) / 100,
                 "lower_circuit": message.get("lower_circuit_limit", 0) / 100,
+                "week_52_high": message.get("52_week_high_price", 0) / 100,
+                "week_52_low": message.get("52_week_low_price", 0) / 100,
             }
 
             # Add depth data if available

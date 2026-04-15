@@ -17,6 +17,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOrderEventRefresh } from '@/hooks/useOrderEventRefresh'
 import { showToast } from '@/utils/toast'
 import { tradingApi } from '@/api/trading'
+import { InstrumentLink } from '@/components/trading'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -941,7 +942,12 @@ export default function Positions() {
                           groupPositions.map((position, index) => (
                             <TableRow key={`${position.symbol}-${position.exchange}-${index}`}>
                               <TableCell className="w-[140px] font-medium">
-                                {position.symbol}
+                                <InstrumentLink
+                                  symbol={position.symbol}
+                                  exchange={position.exchange}
+                                  lotSize={position.lot_size}
+                                  className="font-medium"
+                                />
                               </TableCell>
                               <TableCell className="w-[80px]">
                                 <Badge

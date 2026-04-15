@@ -2,6 +2,7 @@ import { ArrowUpDown, ChevronLeft, ChevronRight, Copy, Search as SearchIcon } fr
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { showToast } from '@/utils/toast'
+import { InstrumentLink } from '@/components/trading'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -243,7 +244,12 @@ export default function Search() {
                     <TableRow key={index} className="hover:bg-muted/50">
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold">{row.symbol}</span>
+                          <InstrumentLink
+                            symbol={row.symbol}
+                            exchange={row.exchange}
+                            lotSize={row.lotsize ?? undefined}
+                            className="font-semibold"
+                          />
                           <Button
                             variant="ghost"
                             size="icon"

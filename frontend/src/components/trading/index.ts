@@ -9,3 +9,6 @@ export type { MarketDepthPanelProps, DepthLevel } from './MarketDepthPanel'
 
 export { PlaceOrderDialog } from './PlaceOrderDialog'
 export type { PlaceOrderDialogProps } from './PlaceOrderDialog'
+
+export { InstrumentLink } from './InstrumentLink'
+export type { InstrumentLinkProps } from './InstrumentLink'

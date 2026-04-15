@@ -2,6 +2,7 @@ import { Download, Loader2, RefreshCw, Settings2, TrendingDown, TrendingUp } fro
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useOrderEventRefresh } from '@/hooks/useOrderEventRefresh'
 import { tradingApi } from '@/api/trading'
+import { InstrumentLink } from '@/components/trading'
 import { Badge } from '@/components/ui/badge'
 import { showToast } from '@/utils/toast'
 import { Button } from '@/components/ui/button'
@@ -446,7 +447,13 @@ export default function TradeBook() {
                 <TableBody>
                   {filteredTrades.map((trade, index) => (
                     <TableRow key={`${trade.orderid}-${index}`}>
-                      <TableCell className="font-medium">{trade.symbol}</TableCell>
+                      <TableCell className="font-medium">
+                        <InstrumentLink
+                          symbol={trade.symbol}
+                          exchange={trade.exchange}
+                          className="font-medium"
+                        />
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">{trade.exchange}</Badge>
                       </TableCell>

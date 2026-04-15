@@ -34,6 +34,8 @@ export interface MarketData {
   ask_price?: number
   bid_size?: number
   ask_size?: number
+  week52High?: number
+  week52Low?: number
   depth?: {
     buy: DepthLevel[]
     sell: DepthLevel[]
@@ -88,6 +90,10 @@ interface QuotesApiData {
   bid?: number
   ask?: number
   oi?: number
+  week_52_high?: number
+  week_52_low?: number
+  week52High?: number
+  week52Low?: number
 }
 
 interface MultiQuotesResult {
@@ -100,6 +106,37 @@ interface MultiQuotesApiResponse {
   status: 'success' | 'error'
   results?: MultiQuotesResult[]
   message?: string
+}
+
+function toFiniteNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return undefined
+}
+
+function extractWeek52High(data: Record<string, unknown> | undefined): number | undefined {
+  if (!data) return undefined
+  return (
+    toFiniteNumber(data.week52High) ??
+    toFiniteNumber(data.week_52_high) ??
+    toFiniteNumber(data['52_week_high']) ??
+    toFiniteNumber(data['52_week_high_price']) ??
+    toFiniteNumber(data.week_52_high_price)
+  )
+}
+
+function extractWeek52Low(data: Record<string, unknown> | undefined): number | undefined {
+  if (!data) return undefined
+  return (
+    toFiniteNumber(data.week52Low) ??
+    toFiniteNumber(data.week_52_low) ??
+    toFiniteNumber(data['52_week_low']) ??
+    toFiniteNumber(data['52_week_low_price']) ??
+    toFiniteNumber(data.week_52_low_price)
+  )
 }
 
 export class MarketDataManager {
@@ -554,6 +591,7 @@ export class MarketDataManager {
           const symbol = (data.symbol as string).toUpperCase()
           const exchange = (data.exchange as string).toUpperCase()
           const marketDataPayload = (data.data || {}) as MarketData
+          const marketDataPayloadRaw = (data.data || {}) as Record<string, unknown>
           const dataKey = `${exchange}:${symbol}`
 
           // Update cache
@@ -574,6 +612,8 @@ export class MarketDataManager {
             ask_price: marketDataPayload.ask_price ?? newData.ask_price,
             bid_size: marketDataPayload.bid_size ?? newData.bid_size,
             ask_size: marketDataPayload.ask_size ?? newData.ask_size,
+            week52High: marketDataPayload.week52High ?? extractWeek52High(marketDataPayloadRaw) ?? newData.week52High,
+            week52Low: marketDataPayload.week52Low ?? extractWeek52Low(marketDataPayloadRaw) ?? newData.week52Low,
             depth: marketDataPayload.depth ?? newData.depth,
           })
 
@@ -797,6 +837,10 @@ export class MarketDataManager {
             volume: result.data.volume ?? newData.volume,
             bid_price: result.data.bid ?? newData.bid_price,
             ask_price: result.data.ask ?? newData.ask_price,
+            week52High:
+              extractWeek52High(result.data as Record<string, unknown>) ?? newData.week52High,
+            week52Low:
+              extractWeek52Low(result.data as Record<string, unknown>) ?? newData.week52Low,
           })
 
           const updatedSymbolData: SymbolData = {
