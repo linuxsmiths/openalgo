@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Trash2, Plus, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { tradingApi } from '@/api/trading'
@@ -33,23 +33,23 @@ interface WatchlistSymbol {
 
 export const Watchlist: React.FC = () => {
   const apiKey = useAuthStore((state: any) => state.apiKey)
-  const [symbols, setSymbols] = useState<WatchlistSymbol[]>([])
+  const queryClient = useQueryClient()
   const [searchOpen, setSearchOpen] = useState(false)
   const [sortField, setSortField] = useState<'symbol' | 'ltp' | 'change_percent'>('symbol')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
 
   const {
+    data: watchlistData = [],
     isLoading,
     error,
     refetch,
-  } = useQuery({
+  } = useQuery<WatchlistSymbol[]>({
     queryKey: ['watchlist', apiKey],
     queryFn: async () => {
-      if (!apiKey) return null
+      if (!apiKey) return []
       try {
         const response = await tradingApi.getWatchlist(apiKey)
         if (response.status === 'success' && response.data) {
-          setSymbols(response.data)
           return response.data
         }
         return []
@@ -61,6 +61,7 @@ export const Watchlist: React.FC = () => {
     refetchInterval: 1000, // Refresh every second
     enabled: !!apiKey,
   })
+  const symbols = watchlistData ?? []
 
   const handleSort = (field: 'symbol' | 'ltp' | 'change_percent') => {
     if (sortField === field) {
@@ -100,10 +101,16 @@ export const Watchlist: React.FC = () => {
   }, [symbols, sortField, sortOrder])
 
   const handleRemove = async (symbol: string, exchange: string) => {
+    if (!apiKey) return
+
     try {
       const response = await tradingApi.removeFromWatchlist(apiKey, symbol, exchange)
       if (response.status === 'success') {
-        setSymbols(symbols.filter((s) => s.symbol !== symbol || s.exchange !== exchange))
+        queryClient.setQueryData<WatchlistSymbol[]>(
+          ['watchlist', apiKey],
+          (current = []) =>
+            current.filter((s) => s.symbol !== symbol || s.exchange !== exchange)
+        )
       }
     } catch (err) {
       console.error('Error removing symbol:', err)
@@ -111,6 +118,8 @@ export const Watchlist: React.FC = () => {
   }
 
   const handleAddSymbol = async (symbol: string, exchange: string) => {
+    if (!apiKey) return
+
     try {
       const response = await tradingApi.addToWatchlist(apiKey, symbol, exchange)
       if (response.status === 'success') {
@@ -122,11 +131,19 @@ export const Watchlist: React.FC = () => {
     }
   }
 
-  const SortHeader = ({ field, label }: { field: typeof sortField; label: string }) => {
+  const SortHeader = ({
+    field,
+    label,
+    className = '',
+  }: {
+    field: typeof sortField
+    label: string
+    className?: string
+  }) => {
     const isActive = sortField === field
     return (
       <div
-        className={`col-header sortable ${isActive ? 'active' : ''}`}
+        className={`col-header sortable ${isActive ? 'active' : ''} ${className}`.trim()}
         onClick={() => handleSort(field)}
       >
         <span>{label}</span>
@@ -187,14 +204,14 @@ export const Watchlist: React.FC = () => {
       ) : (
         <div className="watchlist-table-container">
           <div className="table-header">
-            <SortHeader field="symbol" label="Symbol" />
-            <SortHeader field="ltp" label="Current Price" />
-            <div className="col-header">Bid</div>
-            <div className="col-header">Ask</div>
-            <div className="col-header">Day Change</div>
-            <SortHeader field="change_percent" label="% Change" />
-            <div className="col-header">Volume</div>
-            <div className="col-header">Action</div>
+            <SortHeader field="symbol" label="Symbol" className="col-symbol-header" />
+            <SortHeader field="ltp" label="Current Price" className="col-price-header" />
+            <div className="col-header col-bid-header">Bid</div>
+            <div className="col-header col-ask-header">Ask</div>
+            <div className="col-header col-change-header">Day Change</div>
+            <SortHeader field="change_percent" label="% Change" className="col-percent-header" />
+            <div className="col-header col-volume-header">Volume</div>
+            <div className="col-header col-action-header">Action</div>
           </div>
 
           <div className="table-body">

@@ -164,38 +164,64 @@
   border: 1px solid #e5e7eb;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --watchlist-grid-columns:
+    minmax(0, 1.65fr)
+    minmax(102px, 0.98fr)
+    minmax(84px, 0.8fr)
+    minmax(84px, 0.8fr)
+    minmax(108px, 0.92fr)
+    minmax(96px, 0.84fr)
+    minmax(72px, 0.64fr)
+    48px;
+  --watchlist-grid-gap: 8px;
+  --watchlist-grid-padding-x: 14px;
 }
 
 .table-header {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr 1fr 1fr 0.8fr 0.7fr;
-  gap: 12px;
-  padding: 14px 16px;
+  grid-template-columns: var(--watchlist-grid-columns);
+  gap: var(--watchlist-grid-gap);
+  padding: 12px var(--watchlist-grid-padding-x);
   background: #f9fafb;
   border-bottom: 1px solid #e5e7eb;
+  align-items: center;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 11px;
   color: #6b7280;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
 }
 
 .col-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.col-symbol-header {
+  justify-content: flex-start;
+}
+
+.col-price-header,
+.col-bid-header,
+.col-ask-header,
+.col-change-header,
+.col-percent-header,
+.col-volume-header {
   justify-content: flex-end;
 }
 
-.col-header:first-child {
-  justify-content: flex-start;
+.col-action-header {
+  justify-content: center;
 }
 
 .col-header.sortable {
   cursor: pointer;
   user-select: none;
   transition: color 0.2s ease;
-  padding: 2px 4px;
+  padding: 2px 0;
   border-radius: 4px;
 }
 
@@ -215,9 +241,9 @@
 
 .table-row {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr 1fr 1fr 0.8fr 0.7fr;
-  gap: 12px;
-  padding: 14px 16px;
+  grid-template-columns: var(--watchlist-grid-columns);
+  gap: var(--watchlist-grid-gap);
+  padding: 12px var(--watchlist-grid-padding-x);
   border-bottom: 1px solid #e5e7eb;
   align-items: center;
   transition: all 0.2s ease;
@@ -243,12 +269,17 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .symbol-name {
   font-weight: 600;
   color: #1f2937;
   font-size: 14px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .exchange {
@@ -265,31 +296,40 @@
   font-weight: 600;
   color: #1f2937;
   font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .col-change {
   display: flex;
   justify-content: flex-end;
+  min-width: 0;
 }
 
 .change-details {
   display: flex;
   align-items: center;
   gap: 4px;
+  justify-content: flex-end;
+  width: 100%;
   font-weight: 600;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .col-percent {
   text-align: right;
+  white-space: nowrap;
 }
 
 .percent-badge {
   display: inline-block;
-  padding: 4px 10px;
+  min-width: 72px;
+  padding: 4px 8px;
   border-radius: 6px;
   font-weight: 600;
   font-size: 13px;
+  text-align: center;
 }
 
 .percent-badge.up {
@@ -306,6 +346,8 @@
   text-align: right;
   font-size: 13px;
   color: #6b7280;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .col-action {
@@ -333,10 +375,17 @@
 }
 
 @media (max-width: 1200px) {
-  .table-header,
-  .table-row {
-    grid-template-columns: 1fr 0.9fr 0.7fr 0.7fr 0.9fr 0.9fr 0.6fr 0.6fr;
-    gap: 10px;
+  .watchlist-table-container {
+    --watchlist-grid-columns:
+      minmax(0, 1.45fr)
+      minmax(92px, 0.94fr)
+      minmax(76px, 0.74fr)
+      minmax(76px, 0.74fr)
+      minmax(96px, 0.86fr)
+      minmax(88px, 0.8fr)
+      minmax(68px, 0.58fr)
+      44px;
+    --watchlist-grid-gap: 6px;
   }
 }
 
@@ -357,20 +406,32 @@
     justify-content: center;
   }
 
+  .watchlist-table-container {
+    --watchlist-grid-columns:
+      minmax(0, 1.35fr)
+      minmax(84px, 0.9fr)
+      minmax(70px, 0.72fr)
+      minmax(70px, 0.72fr)
+      minmax(88px, 0.78fr)
+      minmax(82px, 0.82fr)
+      minmax(62px, 0.56fr);
+    --watchlist-grid-gap: 6px;
+    --watchlist-grid-padding-x: 12px;
+  }
+
   .table-header,
   .table-row {
-    grid-template-columns: 1.2fr 0.9fr 0.8fr 0.8fr 0.8fr 0.9fr;
-    gap: 8px;
     padding: 12px;
+  }
+
+  .col-action,
+  .col-action-header {
+    display: none;
   }
 
   .col-bid,
   .col-ask {
     font-size: 12px;
-  }
-
-  .col-action {
-    display: none;
   }
 }
 
@@ -387,10 +448,18 @@
     font-size: 20px;
   }
 
+  .watchlist-table-container {
+    --watchlist-grid-columns:
+      minmax(0, 1.3fr)
+      minmax(80px, 0.9fr)
+      minmax(88px, 0.82fr)
+      minmax(82px, 0.78fr);
+    --watchlist-grid-gap: 6px;
+    --watchlist-grid-padding-x: 10px;
+  }
+
   .table-header,
   .table-row {
-    grid-template-columns: 1.2fr 0.9fr 0.8fr 0.9fr;
-    gap: 6px;
     padding: 10px;
   }
 
@@ -401,7 +470,11 @@
 
   .col-bid,
   .col-ask,
-  .col-volume {
+  .col-volume,
+  .col-bid-header,
+  .col-ask-header,
+  .col-volume-header,
+  .col-action-header {
     display: none;
   }
 
