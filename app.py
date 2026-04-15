@@ -715,6 +715,9 @@ def shutdown_database_sessions(exception=None):
         ("database.leverage_db", "db_session"),
         ("database.market_calendar_db", "db_session"),
         ("database.telegram_db", "db_session"),
+        ("database.indices_cache_db", "db_session"),
+        ("database.topmovers_cache_db", "db_session"),
+        ("database.watchlist_db", "SessionLocal"),
         ("database.symbol", "db_session"),
     ]
 
