@@ -15,13 +15,29 @@ from utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-def get_api_response(endpoint, auth, method="GET", payload=""):
+def extract_52_week_range(quote: dict) -> tuple[float, float]:
+    """Extract 52-week high/low from Angel quote payload when available."""
+    high = (
+        quote.get("52WeekHigh")
+        or quote.get("52_week_high")
+        or quote.get("week_52_high")
+        or quote.get("52_week_high_price")
+        or 0
+    )
+    low = (
+        quote.get("52WeekLow")
+        or quote.get("52_week_low")
+        or quote.get("week_52_low")
+        or quote.get("52_week_low_price")
+        or 0
+    )
+    return float(high or 0), float(low or 0)
+
+
+def get_api_response(endpoint, auth, method="GET", payload="", max_retries=2):
     """Helper function to make API calls to Angel One"""
     AUTH_TOKEN = auth
     api_key = os.getenv("BROKER_API_KEY")
-
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "Authorization": f"Bearer {AUTH_TOKEN}",
@@ -40,13 +56,26 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
 
     url = f"https://apiconnect.angelone.in{endpoint}"
 
-    try:
-        if method == "GET":
-            response = client.get(url, headers=headers)
-        elif method == "POST":
-            response = client.post(url, headers=headers, content=payload)
-        else:
-            response = client.request(method, url, headers=headers, content=payload)
+    for attempt in range(max_retries + 1):
+        # Get the shared httpx client with connection pooling
+        client = get_httpx_client()
+
+        try:
+            if method == "GET":
+                response = client.get(url, headers=headers)
+            elif method == "POST":
+                response = client.post(url, headers=headers, content=payload)
+            else:
+                response = client.request(method, url, headers=headers, content=payload)
+        except httpx.RequestError as e:
+            logger.warning(
+                f"Transient Angel API request failure for {endpoint} "
+                f"(attempt {attempt + 1}/{max_retries + 1}): {e}"
+            )
+            if attempt < max_retries:
+                time.sleep(1)
+                continue
+            return {"status": False, "message": str(e)}
 
         # Add status attribute for compatibility with the existing codebase
         response.status = response.status_code
@@ -56,11 +85,30 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
             logger.debug(f"Debug - Response text: {response.text}")
             raise Exception("Authentication failed. Please check your API key and auth token.")
 
-        return json.loads(response.text)
-    except json.JSONDecodeError:
-        logger.error(f"Debug - Failed to parse response. Status code: {response.status_code}")
-        logger.debug(f"Debug - Response text: {response.text}")
-        raise Exception(f"Failed to parse API response (status {response.status_code})")
+        if not response.text:
+            logger.warning(
+                f"Empty response from Angel API {endpoint} "
+                f"(attempt {attempt + 1}/{max_retries + 1}, HTTP {response.status_code})"
+            )
+            if attempt < max_retries:
+                time.sleep(1)
+                continue
+            return {"status": False, "message": f"Empty response (HTTP {response.status_code})"}
+
+        try:
+            return json.loads(response.text)
+        except json.JSONDecodeError:
+            logger.warning(
+                f"Failed to parse Angel API response from {endpoint} "
+                f"(attempt {attempt + 1}/{max_retries + 1}, HTTP {response.status_code})"
+            )
+            logger.debug(f"Debug - Response text: {response.text}")
+            if attempt < max_retries:
+                time.sleep(1)
+                continue
+            return {"status": False, "message": f"Failed to parse API response (status {response.status_code})"}
+
+    return {"status": False, "message": "Max retries exceeded"}
 
 
 class BrokerData:
@@ -119,6 +167,7 @@ class BrokerData:
                 raise Exception("No quote data received")
 
             quote = fetched_data[0]
+            week_52_high, week_52_low = extract_52_week_range(quote)
 
             # Return quote in common format
             depth = quote.get("depth", {})
@@ -135,6 +184,8 @@ class BrokerData:
                 "prev_close": float(quote.get("close", 0)),
                 "volume": int(quote.get("tradeVolume", 0)),
                 "oi": int(quote.get("opnInterest", 0)),
+                "week_52_high": week_52_high,
+                "week_52_low": week_52_low,
             }
 
         except Exception as e:
@@ -308,6 +359,7 @@ class BrokerData:
             depth = quote.get("depth", {})
             bids = depth.get("buy", [])
             asks = depth.get("sell", [])
+            week_52_high, week_52_low = extract_52_week_range(quote)
 
             result_item = {
                 "symbol": original["symbol"],
@@ -322,6 +374,8 @@ class BrokerData:
                     "prev_close": float(quote.get("close", 0)),
                     "volume": int(quote.get("tradeVolume", 0)),
                     "oi": int(quote.get("opnInterest", 0)),
+                    "week_52_high": week_52_high,
+                    "week_52_low": week_52_low,
                     # Include full market depth (5 levels each)
                     "depth": {
                         "buy": [{"price": float(b.get("price", 0)), "quantity": int(b.get("quantity", 0)), "orders": int(b.get("orders", 0))} for b in bids],

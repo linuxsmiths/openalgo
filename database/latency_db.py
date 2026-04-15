@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from datetime import datetime
@@ -9,6 +10,7 @@ from sqlalchemy.pool import NullPool
 from sqlalchemy.sql import func
 
 logger = logging.getLogger(__name__)
+ERROR_MAX_LENGTH = 500
 
 # Use a separate database for latency logs
 LATENCY_DATABASE_URL = os.getenv("LATENCY_DATABASE_URL", "sqlite:///db/latency.db")
@@ -63,6 +65,21 @@ class OrderLatency(LatencyBase):
     error = Column(String(500))  # Error message if any
 
     @staticmethod
+    def _normalize_error(error):
+        """Normalize error payloads for the string-backed error column."""
+        if error is None:
+            return None
+
+        if isinstance(error, str):
+            normalized = error
+        elif isinstance(error, (dict, list, tuple)):
+            normalized = json.dumps(error, default=str, ensure_ascii=False)
+        else:
+            normalized = str(error)
+
+        return normalized[:ERROR_MAX_LENGTH]
+
+    @staticmethod
     def log_latency(
         order_id,
         user_id,
@@ -91,7 +108,7 @@ class OrderLatency(LatencyBase):
                 request_body=request_body,
                 response_body=response_body,
                 status=status,
-                error=error,
+                error=OrderLatency._normalize_error(error),
             )
             latency_session.add(log)
             latency_session.commit()
