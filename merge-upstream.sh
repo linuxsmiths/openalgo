@@ -5,6 +5,8 @@
 
 set -e
 
+MERGE_RESULT="unknown"
+
 # Color codes
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -64,7 +66,12 @@ resolve_frontend_dist_conflicts() {
     fi
 
     print_warning "Resetting frontend/dist to the current branch state"
-    git reset HEAD -- frontend/dist >/dev/null 2>&1 || true
+    git restore --source=HEAD --staged --worktree -- frontend/dist >/dev/null 2>&1 || true
+
+    if git ls-files -u -- frontend/dist | grep -q .; then
+        git checkout --ours -- frontend/dist >/dev/null 2>&1 || true
+        git add -- frontend/dist >/dev/null 2>&1 || true
+    fi
 
     return 0
 }
@@ -86,9 +93,16 @@ has_remaining_conflicts() {
 attempt_merge() {
     print_header "Merging upstream/main"
     local merge_message="Merge upstream/main (ignoring frontend/dist changes)"
+    MERGE_RESULT="failed"
 
     # Start the merge without committing so we can ignore frontend/dist conflicts
     if git merge upstream/main --no-ff --no-commit 2>&1; then
+        if ! git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
+            print_success "Already up to date"
+            MERGE_RESULT="noop"
+            return 0
+        fi
+
         print_success "Merge applied cleanly"
     else
         echo ""
@@ -111,12 +125,21 @@ attempt_merge() {
         echo "  git add ."
         echo "  git commit --no-edit"
         echo "  git push origin main"
+        MERGE_RESULT="conflicts"
         return 1
+    fi
+
+    if git diff --cached --quiet && git diff --quiet; then
+        git merge --abort >/dev/null 2>&1 || git reset --merge >/dev/null 2>&1 || true
+        print_success "No repository changes remained after dropping frontend/dist"
+        MERGE_RESULT="noop"
+        return 0
     fi
 
     # Finalize the merge commit now that only frontend/dist was ignored
     git commit -m "$merge_message"
     print_success "Merge commit created"
+    MERGE_RESULT="merged"
     return 0
 }
 
@@ -176,6 +199,15 @@ main() {
 
     # Try merge
     if attempt_merge; then
+        if [ "$MERGE_RESULT" = "noop" ]; then
+            print_success "No new changes were merged from upstream"
+            print_success "Skipping frontend rebuild"
+
+            print_header "Merge Complete ✓"
+            echo "Your fork is already up-to-date with upstream."
+            exit 0
+        fi
+
         # Merge successful, rebuild frontend
         print_success "Merge completed successfully"
 
